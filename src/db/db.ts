@@ -73,6 +73,12 @@ interface MyStatsDB extends DBSchema {
 
 const DB_NAME = 'mystats-db';
 const DB_VERSION = 5;
+const DB_OPEN_TIMEOUT_MS = 8000;
+
+export const DB_ERRORS = {
+    blocked: 'DB_BLOCKED',
+    timeout: 'DB_TIMEOUT',
+} as const;
 
 /**
  * Ensures the storage is persistent and not cleared by the browser automatically.
@@ -88,7 +94,8 @@ const requestPersistence = async () => {
 
 export const initDB = async () => {
   await requestPersistence();
-  return openDB<MyStatsDB>(DB_NAME, DB_VERSION, {
+  let isBlocked = false;
+  const openPromise = openDB<MyStatsDB>(DB_NAME, DB_VERSION, {
     upgrade(db, oldVersion) {
       if (oldVersion < 1) {
         if (!db.objectStoreNames.contains('journal')) {
@@ -128,7 +135,22 @@ export const initDB = async () => {
         }
       }
     },
+    blocked() {
+      isBlocked = true;
+      console.warn('[DB] Open blocked: close other MyStats tabs to finish upgrade.');
+    },
+    terminated() {
+      console.warn('[DB] Connection terminated unexpectedly.');
+    },
   });
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      reject(new Error(isBlocked ? DB_ERRORS.blocked : DB_ERRORS.timeout));
+    }, DB_OPEN_TIMEOUT_MS);
+  });
+
+  return Promise.race([openPromise, timeoutPromise]);
 };
 
 /**

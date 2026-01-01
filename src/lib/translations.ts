@@ -32,6 +32,8 @@ export const translations = {
     apiKeyRequired: "Add an API key in Dashboard to enable AI features.",
     analysisFailed: "AI analysis failed. Check your API key or model and try again.",
     saveFailed: "Failed to save entry. Check browser storage and try again.",
+    dbBlocked: "Database is blocked by another tab. Close other tabs and retry.",
+    dbTimeout: "Database is taking too long to open. Check browser storage and retry.",
     charCount: "characters",
 
     // Profile
@@ -98,6 +100,8 @@ export const translations = {
     apiKeyRequired: "대시보드에서 API 키를 추가하면 AI 기능을 사용할 수 있습니다.",
     analysisFailed: "AI 분석에 실패했습니다. API 키 또는 모델을 확인해 주세요.",
     saveFailed: "저장에 실패했습니다. 브라우저 저장소를 확인해 주세요.",
+    dbBlocked: "다른 탭에서 데이터베이스가 잠겨 있습니다. 다른 탭을 닫고 다시 시도해 주세요.",
+    dbTimeout: "데이터베이스 로딩이 지연됩니다. 브라우저 저장소를 확인해 주세요.",
     charCount: "자",
 
     // Profile

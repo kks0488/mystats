@@ -11,7 +11,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { getDB } from '../db/db';
+import { getDB, DB_ERRORS } from '../db/db';
 import { generateStrategy, checkAIStatus } from '../lib/ai-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -76,7 +76,17 @@ export const Strategy = () => {
         } catch (error) {
             console.error("Strategy generation failed", error);
             setStatus('error');
-            setErrorMessage(error instanceof Error ? error.message : t('strategyFailed'));
+            if (error instanceof Error) {
+                if (error.message === DB_ERRORS.blocked) {
+                    setErrorMessage(t('dbBlocked'));
+                } else if (error.message === DB_ERRORS.timeout) {
+                    setErrorMessage(t('dbTimeout'));
+                } else {
+                    setErrorMessage(error.message || t('strategyFailed'));
+                }
+            } else {
+                setErrorMessage(t('strategyFailed'));
+            }
         }
     };
 

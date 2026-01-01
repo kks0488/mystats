@@ -11,7 +11,7 @@ import {
   BookOpen,
   Zap
 } from 'lucide-react';
-import { getDB, upsertSkill, type Skill, type Insight, type JournalEntry } from '../db/db';
+import { getDB, upsertSkill, DB_ERRORS, type Skill, type Insight, type JournalEntry } from '../db/db';
 import { analyzeEntryWithAI, checkAIStatus } from '../lib/ai-provider';
 import { generateId } from '../lib/utils';
 import { Button } from '@/components/ui/button';
@@ -134,7 +134,17 @@ export const Journal = () => {
         } catch (error) {
             console.error('Failed to save', error);
             setStatus('error');
-            setAnalysisError(t('saveFailed'));
+            if (error instanceof Error) {
+                if (error.message === DB_ERRORS.blocked) {
+                    setAnalysisError(t('dbBlocked'));
+                } else if (error.message === DB_ERRORS.timeout) {
+                    setAnalysisError(t('dbTimeout'));
+                } else {
+                    setAnalysisError(error.message || t('saveFailed'));
+                }
+            } else {
+                setAnalysisError(t('saveFailed'));
+            }
         }
     };
 
