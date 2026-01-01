@@ -281,7 +281,7 @@ export const Journal = () => {
                         for (const group of categories) {
                             if (group.items) {
                                 for (const item of group.items) {
-                                    const category = (group.defaultCategory || item.category) as Skill['category'];
+                                    const category = (item.category ?? group.defaultCategory) as Skill['category'];
                                     if (useFallback) {
                                         upsertFallbackSkill({ name: item.name, category }, entryId);
                                     } else {
