@@ -103,7 +103,11 @@ Describe a problem. Get a **ruthlessly personalized solution**:
 
 ### Prerequisites
 - Node.js 18+
-- [Google AI Studio API Key](https://aistudio.google.com/app/apikey) (Free)
+- API key (choose one):
+  - [Google AI Studio - Gemini](https://aistudio.google.com/app/apikey) (Free)
+  - [OpenAI](https://platform.openai.com/api-keys)
+  - [Anthropic Claude](https://console.anthropic.com/settings/keys)
+  - [xAI Grok](https://console.x.ai/)
 
 ### Installation
 
@@ -175,7 +179,7 @@ Toggle language in the header.
 
 - **100% Local Storage**: All data stored in IndexedDB on your device
 - **No Server**: No backend, no tracking, no data collection
-- **Your API Key**: Direct connection to Google AI (we never see it)
+- **Your API Key**: Direct connection to your provider (we never see it)
 - **Export Anytime**: Download your data as JSON
 
 ---

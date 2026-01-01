@@ -11,7 +11,8 @@ Just shipped MyStats 🧠
 
 AI-powered self-discovery app that decodes your hidden patterns & generates personalized career strategies.
 
-Built with #VibeCoding using @Google Gemini
+Multi-AI: Gemini / OpenAI / Claude / Grok
+Drafted with Gemini -> refined with Claude Opus 4.5 -> finalized with GPT-5.2 Codex
 
 ✨ Try it: mystats-eta.vercel.app
 ⭐ Star: github.com/kks0488/mystats
@@ -23,7 +24,7 @@ Built with #VibeCoding using @Google Gemini
 
 ## 2️⃣ Reddit - r/reactjs
 
-**Title:** I built an AI-powered self-discovery app with React + TypeScript + Gemini
+**Title:** I built an AI-powered self-discovery app with React + TypeScript + Multi-AI
 
 **Body:**
 ```
@@ -37,7 +38,7 @@ Just shipped **MyStats** - an AI-powered self-discovery engine that analyzes you
 ### Tech Stack:
 - React 19 + TypeScript
 - Vite + Tailwind CSS
-- Google Gemini AI
+- Multi-AI providers (Gemini / OpenAI / Claude / Grok)
 - IndexedDB (100% local, no backend!)
 - Framer Motion animations
 
@@ -48,7 +49,7 @@ Just shipped **MyStats** - an AI-powered self-discovery engine that analyzes you
 - 🌐 Korean/English bilingual
 - 🔒 Privacy-first: All data stays in your browser
 
-Built this with "Vibe Coding" - AI-assisted development where ideas come first. The whole project uses Google Gemini for analysis.
+Built this with "Vibe Coding" - AI-assisted development where ideas come first. Drafted with Gemini, refined with Claude Opus 4.5, finalized with GPT-5.2 Codex.
 
 Would love feedback on the UX and code architecture! PRs welcome 🙏
 
@@ -77,14 +78,14 @@ After journaling for years and never knowing what to do with all those entries, 
 
 **Privacy-first:** Everything runs in your browser. No account, no backend, no tracking.
 
-Built with React + Google Gemini AI. MIT licensed - fork it!
+Built with React + multi-AI providers (Gemini / OpenAI / Claude / Grok). MIT licensed - fork it!
 ```
 
 ---
 
 ## 4️⃣ Hacker News - Show HN
 
-**Title:** Show HN: MyStats – AI-powered self-discovery using Google Gemini
+**Title:** Show HN: MyStats – AI-powered self-discovery with Gemini/OpenAI/Claude/Grok
 
 **Body:**
 ```
@@ -100,11 +101,11 @@ Key features:
 - 100% local storage (IndexedDB) - no backend, no tracking
 - Korean/English bilingual output
 
-Tech: React 19, TypeScript, Vite, Tailwind, Google Gemini API
+Tech: React 19, TypeScript, Vite, Tailwind, multi-AI APIs (Gemini/OpenAI/Claude/Grok)
 
 The interesting part is the "archetype detection" - the AI identifies patterns like "The Architect of Systems" or "The Reflective Grower" based on how you describe yourself.
 
-Built with "Vibe Coding" philosophy - AI-assisted development focusing on shipping fast.
+Built with "Vibe Coding" philosophy - AI-assisted development focusing on shipping fast. Drafted with Gemini, refined with Claude Opus 4.5, finalized with GPT-5.2 Codex.
 
 Would love feedback from the HN community!
 ```
@@ -128,7 +129,7 @@ Features:
 🔒 100% private (all data in browser)
 🌐 Bilingual (English + Korean)
 
-Built with React + Google Gemini. Open source.
+Built with React + multi-AI providers (Gemini/OpenAI/Claude/Grok). Open source.
 ```
 
 ---
