@@ -29,13 +29,16 @@ const loadFallbackEntries = (): JournalEntry[] => {
         if (!Array.isArray(parsed)) return [];
         return parsed
             .filter((item) => item && typeof item === 'object')
-            .map((item) => ({
-                id: String(item.id || crypto.randomUUID()),
-                content: String(item.content || ''),
-                timestamp: typeof item.timestamp === 'number' ? item.timestamp : Date.now(),
-                type: item.type === 'project' ? 'project' : 'journal',
-                lastModified: typeof item.lastModified === 'number' ? item.lastModified : undefined,
-            }))
+            .map((item) => {
+                const entryType: JournalEntry['type'] = item.type === 'project' ? 'project' : 'journal';
+                return {
+                    id: String(item.id || crypto.randomUUID()),
+                    content: String(item.content || ''),
+                    timestamp: typeof item.timestamp === 'number' ? item.timestamp : Date.now(),
+                    type: entryType,
+                    lastModified: typeof item.lastModified === 'number' ? item.lastModified : undefined,
+                };
+            })
             .sort((a, b) => b.timestamp - a.timestamp);
     } catch {
         return [];
