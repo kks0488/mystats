@@ -38,11 +38,17 @@ export const Profile = () => {
     const [isExporting, setIsExporting] = useState(false);
 
     const loadData = async () => {
-        const db = await getDB();
-        const allSkills = await db.getAll('skills');
-        const allInsights = await db.getAll('insights');
-        setSkills(allSkills);
-        setInsights(allInsights);
+        try {
+            const db = await getDB();
+            const allSkills = await db.getAll('skills');
+            const allInsights = await db.getAll('insights');
+            setSkills(allSkills);
+            setInsights(allInsights);
+        } catch (error) {
+            console.warn('Failed to load profile data', error);
+            setSkills([]);
+            setInsights([]);
+        }
     };
 
     useEffect(() => {

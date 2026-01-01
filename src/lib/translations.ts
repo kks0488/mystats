@@ -35,6 +35,9 @@ export const translations = {
     dbBlocked: "Database is blocked by another tab. Close other tabs and retry.",
     dbTimeout: "Database is taking too long to open. Check browser storage and retry.",
     dbMissingStore: "Database schema is out of sync. Refresh the page and retry.",
+    dbFallbackMode: "Database unavailable. Entries are saved locally only.",
+    dbReset: "Reset DB",
+    dbResetConfirm: "Reset local database? This may remove local data.",
     charCount: "characters",
 
     // Profile
@@ -104,6 +107,9 @@ export const translations = {
     dbBlocked: "다른 탭에서 데이터베이스가 잠겨 있습니다. 다른 탭을 닫고 다시 시도해 주세요.",
     dbTimeout: "데이터베이스 로딩이 지연됩니다. 브라우저 저장소를 확인해 주세요.",
     dbMissingStore: "데이터베이스 스키마가 맞지 않습니다. 새로고침 후 다시 시도해 주세요.",
+    dbFallbackMode: "데이터베이스를 사용할 수 없습니다. 이 브라우저에만 임시 저장됩니다.",
+    dbReset: "DB 초기화",
+    dbResetConfirm: "로컬 데이터베이스를 초기화할까요? 로컬 데이터가 삭제될 수 있습니다.",
     charCount: "자",
 
     // Profile

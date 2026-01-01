@@ -71,7 +71,7 @@ interface MyStatsDB extends DBSchema {
   };
 }
 
-const DB_NAME = 'mystats-db';
+export const DB_NAME = 'mystats-db';
 const DB_VERSION = 6;
 const DB_OPEN_TIMEOUT_MS = 8000;
 export const DB_OP_TIMEOUT_MS = 8000;

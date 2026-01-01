@@ -11,13 +11,43 @@ import {
   BookOpen,
   Zap
 } from 'lucide-react';
-import { getDB, upsertSkill, DB_ERRORS, DB_OP_TIMEOUT_MS, type Skill, type Insight, type JournalEntry } from '../db/db';
+import { getDB, upsertSkill, DB_ERRORS, DB_OP_TIMEOUT_MS, DB_NAME, type Skill, type Insight, type JournalEntry } from '../db/db';
 import { analyzeEntryWithAI, checkAIStatus } from '../lib/ai-provider';
 import { generateId } from '../lib/utils';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '../hooks/useLanguage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+
+const FALLBACK_JOURNAL_KEY = 'MYSTATS_FALLBACK_JOURNAL';
+
+const loadFallbackEntries = (): JournalEntry[] => {
+    try {
+        const raw = localStorage.getItem(FALLBACK_JOURNAL_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed
+            .filter((item) => item && typeof item === 'object')
+            .map((item) => ({
+                id: String(item.id || crypto.randomUUID()),
+                content: String(item.content || ''),
+                timestamp: typeof item.timestamp === 'number' ? item.timestamp : Date.now(),
+                type: item.type === 'project' ? 'project' : 'journal',
+                lastModified: typeof item.lastModified === 'number' ? item.lastModified : undefined,
+            }))
+            .sort((a, b) => b.timestamp - a.timestamp);
+    } catch {
+        return [];
+    }
+};
+
+const saveFallbackEntry = (entry: JournalEntry): JournalEntry[] => {
+    const existing = loadFallbackEntries();
+    const next = [entry, ...existing].slice(0, 200);
+    localStorage.setItem(FALLBACK_JOURNAL_KEY, JSON.stringify(next));
+    return next;
+};
 
 export const Journal = () => {
     const { t, language } = useLanguage();
@@ -30,12 +60,33 @@ export const Journal = () => {
     const [aiConfigured, setAiConfigured] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const analysisRunId = useRef(0);
+    const [dbNotice, setDbNotice] = useState<string | null>(null);
 
     const loadHistory = useCallback(async () => {
-        const db = await getDB();
-        const allEntries = await db.getAllFromIndex('journal', 'by-date');
-        setHistory(allEntries.reverse());
-    }, []);
+        try {
+            const db = await getDB();
+            const allEntries = await db.getAllFromIndex('journal', 'by-date');
+            setHistory(allEntries.reverse());
+            setDbNotice(null);
+            setAnalysisError(null);
+        } catch (error) {
+            setHistory(loadFallbackEntries());
+            setDbNotice(t('dbFallbackMode'));
+            if (error instanceof Error) {
+                if (error.message === DB_ERRORS.blocked) {
+                    setAnalysisError(t('dbBlocked'));
+                } else if (error.message === DB_ERRORS.timeout) {
+                    setAnalysisError(t('dbTimeout'));
+                } else if (error.name === 'NotFoundError' || error.message.includes('object stores')) {
+                    setAnalysisError(t('dbMissingStore'));
+                } else {
+                    setAnalysisError(t('saveFailed'));
+                }
+            } else {
+                setAnalysisError(t('saveFailed'));
+            }
+        }
+    }, [t]);
 
     useEffect(() => {
         loadHistory();
@@ -46,6 +97,39 @@ export const Journal = () => {
         }
     }, [loadHistory]);
 
+    const resolveDbErrorMessage = (error: unknown): string => {
+        if (error instanceof Error) {
+            if (error.message === DB_ERRORS.blocked) return t('dbBlocked');
+            if (error.message === DB_ERRORS.timeout) return t('dbTimeout');
+            if (error.name === 'NotFoundError' || error.message.includes('object stores')) {
+                return t('dbMissingStore');
+            }
+        }
+        return t('saveFailed');
+    };
+
+    const isDbFailure = (error: unknown): boolean => {
+        if (!(error instanceof Error)) return false;
+        return (
+            error.message === DB_ERRORS.blocked ||
+            error.message === DB_ERRORS.timeout ||
+            error.name === 'NotFoundError' ||
+            error.message.includes('object stores')
+        );
+    };
+
+    const handleResetDb = () => {
+        const confirmed = window.confirm(t('dbResetConfirm'));
+        if (!confirmed) return;
+        try {
+            indexedDB.deleteDatabase(DB_NAME);
+        } catch {
+            // Ignore and reload anyway.
+        }
+        localStorage.removeItem(FALLBACK_JOURNAL_KEY);
+        window.location.reload();
+    };
+
     const handleSave = async () => {
         if (!content.trim()) return;
         setStatus('saving');
@@ -53,9 +137,28 @@ export const Journal = () => {
         const entryContent = content;
         
         try {
-            const db = await getDB();
             const entryId = generateId();
             const timestamp = Date.now();
+            const entry: JournalEntry = {
+                id: entryId,
+                content,
+                timestamp,
+                type: 'journal',
+                lastModified: timestamp
+            };
+            let db;
+            try {
+                db = await getDB();
+                setDbNotice(null);
+            } catch (error) {
+                setDbNotice(t('dbFallbackMode'));
+                setAnalysisError(resolveDbErrorMessage(error));
+                const fallbackEntries = saveFallbackEntry(entry);
+                setHistory(fallbackEntries);
+                setStatus('saved');
+                setContent('');
+                return;
+            }
             const savePromise = db.put('journal', {
                 id: entryId,
                 content,
@@ -63,12 +166,25 @@ export const Journal = () => {
                 type: 'journal',
                 lastModified: timestamp
             });
-            await Promise.race([
-                savePromise,
-                new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error(DB_ERRORS.timeout)), DB_OP_TIMEOUT_MS);
-                }),
-            ]);
+            try {
+                await Promise.race([
+                    savePromise,
+                    new Promise((_, reject) => {
+                        setTimeout(() => reject(new Error(DB_ERRORS.timeout)), DB_OP_TIMEOUT_MS);
+                    }),
+                ]);
+            } catch (error) {
+                if (isDbFailure(error)) {
+                    setDbNotice(t('dbFallbackMode'));
+                    setAnalysisError(resolveDbErrorMessage(error));
+                    const fallbackEntries = saveFallbackEntry(entry);
+                    setHistory(fallbackEntries);
+                    setStatus('saved');
+                    setContent('');
+                    return;
+                }
+                throw error;
+            }
 
             setStatus('saved');
             setContent('');
@@ -139,16 +255,11 @@ export const Journal = () => {
         } catch (error) {
             console.error('Failed to save', error);
             setStatus('error');
-            if (error instanceof Error) {
-                if (error.message === DB_ERRORS.blocked) {
-                    setAnalysisError(t('dbBlocked'));
-                } else if (error.message === DB_ERRORS.timeout) {
-                    setAnalysisError(t('dbTimeout'));
-                } else if (error.name === 'NotFoundError' || error.message.includes('object stores')) {
-                    setAnalysisError(t('dbMissingStore'));
-                } else {
-                    setAnalysisError(error.message || t('saveFailed'));
-                }
+            if (isDbFailure(error)) {
+                setDbNotice(t('dbFallbackMode'));
+                setAnalysisError(resolveDbErrorMessage(error));
+            } else if (error instanceof Error) {
+                setAnalysisError(error.message || t('saveFailed'));
             } else {
                 setAnalysisError(t('saveFailed'));
             }
@@ -249,12 +360,28 @@ export const Journal = () => {
                             </div>
                         </div>
 
-                        {(!aiConfigured || analysisError) && (
+                        {(!aiConfigured || analysisError || dbNotice) && (
                             <div className="px-8 py-4 border-b border-border bg-background/40 space-y-2">
                                 {!aiConfigured && (
                                     <div className="flex items-start gap-2 text-xs font-semibold text-amber-500">
                                         <AlertCircle className="w-4 h-4 mt-0.5" />
                                         <span>{t('noApiKeyWarning')}</span>
+                                    </div>
+                                )}
+                                {dbNotice && (
+                                    <div className="flex items-center justify-between gap-3 text-xs font-semibold text-amber-500">
+                                        <div className="flex items-start gap-2">
+                                            <AlertCircle className="w-4 h-4 mt-0.5" />
+                                            <span>{dbNotice}</span>
+                                        </div>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleResetDb}
+                                            className="h-7 px-3 text-[10px] font-black tracking-widest uppercase"
+                                        >
+                                            {t('dbReset')}
+                                        </Button>
                                     </div>
                                 )}
                                 {analysisError && (

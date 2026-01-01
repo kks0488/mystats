@@ -65,11 +65,16 @@ export const Home = () => {
         setSelectedModel(config.model || AI_PROVIDERS[config.provider].defaultModel);
 
         const loadStats = async () => {
-            const db = await getDB();
-            const entries = await db.count('journal');
-            const skills = await db.count('skills');
-            const insights = await db.count('insights');
-            setStats({ entries, skills, insights });
+            try {
+                const db = await getDB();
+                const entries = await db.count('journal');
+                const skills = await db.count('skills');
+                const insights = await db.count('insights');
+                setStats({ entries, skills, insights });
+            } catch (error) {
+                console.warn('Failed to load stats', error);
+                setStats({ entries: 0, skills: 0, insights: 0 });
+            }
         };
         loadStats();
     }, []);
