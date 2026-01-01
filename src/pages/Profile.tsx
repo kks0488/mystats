@@ -455,25 +455,36 @@ export const Profile = () => {
                         insights: Array.isArray(data.fallback.insights) ? data.fallback.insights : [],
                     }
                     : { journal: [], skills: [], insights: [] };
-                const hasFallback = fallbackData.journal.length || fallbackData.skills.length || fallbackData.insights.length;
+                const hasFallback = fallbackData.journal.length > 0 || fallbackData.skills.length > 0 || fallbackData.insights.length > 0;
 
-                const rawJournal = [...baseData.journal, ...fallbackData.journal] as JournalEntry[];
-                const rawSkills = [...baseData.skills, ...fallbackData.skills] as Skill[];
-                const rawInsights = [...baseData.insights, ...fallbackData.insights] as Insight[];
-
-                let mergedJournal = mergeById<JournalEntry>([...baseData.journal, ...fallbackData.journal] as JournalEntry[]);
-                let mergedSkills = mergeSkillsByName([...baseData.skills, ...fallbackData.skills] as Skill[]);
-                let mergedInsights = mergeById<Insight>([...baseData.insights, ...fallbackData.insights] as Insight[]);
-                const mergedSolutions = mergeById(baseData.solutions as { id?: string }[]);
-
+                let includeFallback = hasFallback;
                 if (hasFallback) {
                     const confirmFallback = window.confirm(t('importFallbackWarning'));
-                    if (!confirmFallback) {
-                        mergedJournal = mergeById<JournalEntry>(baseData.journal as JournalEntry[]);
-                        mergedSkills = mergeSkillsByName(baseData.skills as Skill[]);
-                        mergedInsights = mergeById<Insight>(baseData.insights as Insight[]);
-                    }
+                    includeFallback = confirmFallback;
                 }
+
+                const selectedJournal = (includeFallback
+                    ? [...baseData.journal, ...fallbackData.journal]
+                    : [...baseData.journal]) as JournalEntry[];
+                const selectedSkills = (includeFallback
+                    ? [...baseData.skills, ...fallbackData.skills]
+                    : [...baseData.skills]) as Skill[];
+                const selectedInsights = (includeFallback
+                    ? [...baseData.insights, ...fallbackData.insights]
+                    : [...baseData.insights]) as Insight[];
+
+                const rawJournal = selectedJournal;
+                const rawSkills = selectedSkills;
+                const rawInsights = selectedInsights;
+
+                let mergedJournal = mergeById<JournalEntry>(selectedJournal);
+                let mergedSkills = mergeSkillsByName(selectedSkills);
+                let mergedInsights = mergeById<Insight>(selectedInsights);
+                const mergedSolutions = mergeById(baseData.solutions as { id?: string }[]);
+                const summaryText = t('importSummary')
+                    .replace('{entries}', String(mergedJournal.length))
+                    .replace('{skills}', String(mergedSkills.length))
+                    .replace('{insights}', String(mergedInsights.length));
 
                 try {
                     await importAllData({
@@ -482,7 +493,11 @@ export const Profile = () => {
                         solutions: mergedSolutions,
                         insights: mergedInsights,
                     });
-                    alert(language === 'ko' ? "데이터 복원이 완료되었습니다." : "Data restoration complete.");
+                    alert(
+                        mergedJournal.length || mergedSkills.length || mergedInsights.length
+                            ? summaryText
+                            : t('importEmpty')
+                    );
                     loadData();
                     window.dispatchEvent(new Event('mystats-data-updated'));
                 } catch (err) {
@@ -493,7 +508,11 @@ export const Profile = () => {
                     setSkills(loadFallbackSkills());
                     setInsights(loadFallbackInsights());
                     setDbNotice(t('dbProfileFallback'));
-                    alert(t('importFallbackOnly'));
+                    alert(
+                        mergedJournal.length || mergedSkills.length || mergedInsights.length
+                            ? `${t('importFallbackOnly')}\n${summaryText}`
+                            : `${t('importFallbackOnly')}\n${t('importEmpty')}`
+                    );
                     loadData();
                     window.dispatchEvent(new Event('mystats-data-updated'));
                 }

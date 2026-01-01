@@ -64,6 +64,8 @@ export const translations = {
     exportDbUnavailable: "Database unavailable. Only local fallback data will be exported. Continue?",
     importFallbackWarning: "This backup includes local fallback data. It may be unstable or create duplicates. Import anyway?",
     importFallbackOnly: "Database unavailable. Data restored to local fallback only.",
+    importSummary: "Imported: {entries} entries, {skills} skills, {insights} insights.",
+    importEmpty: "No usable records found in this backup.",
 
     // Profile
     profileTitle: "My Profile",
@@ -161,6 +163,8 @@ export const translations = {
     exportDbUnavailable: "데이터베이스를 사용할 수 없습니다. 로컬 폴백 데이터만 내보냅니다. 계속할까요?",
     importFallbackWarning: "이 백업에는 로컬 폴백 데이터가 포함되어 있습니다. 불안정하거나 중복이 생길 수 있습니다. 계속할까요?",
     importFallbackOnly: "데이터베이스를 사용할 수 없어 로컬 폴백으로만 복원했습니다.",
+    importSummary: "가져옴: 기록 {entries}개, 스킬 {skills}개, 인사이트 {insights}개.",
+    importEmpty: "백업에서 사용할 수 있는 데이터가 없습니다.",
 
     // Profile
     profileTitle: "나의 프로필",
