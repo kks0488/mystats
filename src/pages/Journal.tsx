@@ -21,6 +21,7 @@ import {
     upsertFallbackSkill,
     addFallbackInsight,
     clearFallbackData,
+    getFallbackStorageMode,
 } from '../db/fallback';
 import { analyzeEntryWithAI, checkAIStatus } from '../lib/ai-provider';
 import { generateId } from '../lib/utils';
@@ -98,7 +99,7 @@ export const Journal = () => {
             return true;
         } catch (error) {
             console.warn('Failed to recover fallback entries', error);
-            setDbNotice(t('dbFallbackMode'));
+            setDbNotice(getFallbackStorageMode() === 'memory' ? t('dbFallbackSession') : t('dbFallbackMode'));
             return false;
         } finally {
             migrationInProgress.current = false;
@@ -119,7 +120,7 @@ export const Journal = () => {
             }
         } catch (error) {
             setHistory(loadFallbackJournalEntries());
-            setDbNotice(t('dbFallbackMode'));
+            setDbNotice(getFallbackStorageMode() === 'memory' ? t('dbFallbackSession') : t('dbFallbackMode'));
             if (error instanceof Error) {
                 if (error.message === DB_ERRORS.blocked) {
                     setAnalysisError(t('dbBlocked'));
@@ -174,9 +175,9 @@ export const Journal = () => {
                 setDbNotice(null);
             } catch (error) {
                 useFallback = true;
-                setDbNotice(t('dbFallbackMode'));
                 setAnalysisError(resolveDbErrorMessage(error));
                 setHistory(saveFallbackJournalEntry(entry));
+                setDbNotice(getFallbackStorageMode() === 'memory' ? t('dbFallbackSession') : t('dbFallbackMode'));
             }
 
             if (!useFallback && db) {
@@ -197,9 +198,9 @@ export const Journal = () => {
                 } catch (error) {
                     if (isDbFailure(error)) {
                         useFallback = true;
-                        setDbNotice(t('dbFallbackMode'));
                         setAnalysisError(resolveDbErrorMessage(error));
                         setHistory(saveFallbackJournalEntry(entry));
+                        setDbNotice(getFallbackStorageMode() === 'memory' ? t('dbFallbackSession') : t('dbFallbackMode'));
                     } else {
                         throw error;
                     }

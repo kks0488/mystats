@@ -6,6 +6,60 @@ const FALLBACK_KEYS = {
   insights: 'MYSTATS_FALLBACK_INSIGHTS',
 } as const;
 
+type FallbackStorageMode = 'local' | 'memory';
+
+let storageMode: FallbackStorageMode = 'local';
+let warned = false;
+const memoryStore: Record<string, string> = {};
+
+const markMemoryMode = (error?: unknown) => {
+  if (storageMode !== 'memory') {
+    storageMode = 'memory';
+    if (!warned) {
+      console.warn('[Fallback] LocalStorage unavailable. Using memory only.', error);
+      warned = true;
+    }
+  }
+};
+
+const getStorageValue = (key: string): string | null => {
+  if (storageMode === 'memory') return memoryStore[key] ?? null;
+  try {
+    return localStorage.getItem(key);
+  } catch (error) {
+    markMemoryMode(error);
+    return memoryStore[key] ?? null;
+  }
+};
+
+const setStorageValue = (key: string, value: string) => {
+  if (storageMode === 'memory') {
+    memoryStore[key] = value;
+    return;
+  }
+  try {
+    localStorage.setItem(key, value);
+  } catch (error) {
+    markMemoryMode(error);
+    memoryStore[key] = value;
+  }
+};
+
+const removeStorageValue = (key: string) => {
+  if (storageMode === 'memory') {
+    delete memoryStore[key];
+    return;
+  }
+  try {
+    localStorage.removeItem(key);
+  } catch (error) {
+    markMemoryMode(error);
+    delete memoryStore[key];
+  }
+};
+
+export const getFallbackStorageMode = () => storageMode;
+
 const SKILL_CATEGORIES: Skill['category'][] = [
   'hard',
   'soft',
@@ -18,7 +72,7 @@ const SKILL_CATEGORIES: Skill['category'][] = [
 
 const safeParseList = (key: string): unknown[] => {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = getStorageValue(key);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -95,7 +149,7 @@ export const loadFallbackJournalEntries = (): JournalEntry[] => {
 export const saveFallbackJournalEntry = (entry: JournalEntry): JournalEntry[] => {
   const existing = loadFallbackJournalEntries().filter((item) => item.id !== entry.id);
   const next = [entry, ...existing].slice(0, 200);
-  localStorage.setItem(FALLBACK_KEYS.journal, JSON.stringify(next));
+  setStorageValue(FALLBACK_KEYS.journal, JSON.stringify(next));
   return next;
 };
 
@@ -128,7 +182,7 @@ export const upsertFallbackSkill = (
       lastModified: Date.now(),
     });
   }
-  localStorage.setItem(FALLBACK_KEYS.skills, JSON.stringify(existing));
+  setStorageValue(FALLBACK_KEYS.skills, JSON.stringify(existing));
   return existing;
 };
 
@@ -142,20 +196,20 @@ export const loadFallbackInsights = (): Insight[] => {
 export const addFallbackInsight = (insight: Insight): Insight[] => {
   const existing = loadFallbackInsights().filter((item) => item.id !== insight.id);
   const next = [insight, ...existing].slice(0, 100);
-  localStorage.setItem(FALLBACK_KEYS.insights, JSON.stringify(next));
+  setStorageValue(FALLBACK_KEYS.insights, JSON.stringify(next));
   return next;
 };
 
 export const clearFallbackData = () => {
-  localStorage.removeItem(FALLBACK_KEYS.journal);
-  localStorage.removeItem(FALLBACK_KEYS.skills);
-  localStorage.removeItem(FALLBACK_KEYS.insights);
+  removeStorageValue(FALLBACK_KEYS.journal);
+  removeStorageValue(FALLBACK_KEYS.skills);
+  removeStorageValue(FALLBACK_KEYS.insights);
 };
 
 export const clearFallbackSkills = () => {
-  localStorage.removeItem(FALLBACK_KEYS.skills);
+  removeStorageValue(FALLBACK_KEYS.skills);
 };
 
 export const clearFallbackInsights = () => {
-  localStorage.removeItem(FALLBACK_KEYS.insights);
+  removeStorageValue(FALLBACK_KEYS.insights);
 };
