@@ -47,16 +47,9 @@ export const Journal = () => {
     });
     const migrationInProgress = useRef(false);
 
-    const resolveDbErrorMessage = (error: unknown): string => {
-        if (error instanceof Error) {
-            if (error.message === DB_ERRORS.blocked) return t('dbBlocked');
-            if (error.message === DB_ERRORS.timeout) return t('dbTimeout');
-            if (error.name === 'NotFoundError' || error.message.includes('object stores')) {
-                return t('dbMissingStore');
-            }
-        }
-        return t('saveFailed');
-    };
+    const setFallbackNotice = useCallback(() => {
+        setDbNotice(getFallbackStorageMode() === 'memory' ? t('dbFallbackSession') : t('dbFallbackMode'));
+    }, [t]);
 
     const isDbFailure = (error: unknown): boolean => {
         if (!(error instanceof Error)) return false;
@@ -99,12 +92,12 @@ export const Journal = () => {
             return true;
         } catch (error) {
             console.warn('Failed to recover fallback entries', error);
-            setDbNotice(getFallbackStorageMode() === 'memory' ? t('dbFallbackSession') : t('dbFallbackMode'));
+            setFallbackNotice();
             return false;
         } finally {
             migrationInProgress.current = false;
         }
-    }, [t]);
+    }, [setFallbackNotice, t]);
 
     const loadHistory = useCallback(async () => {
         try {
@@ -120,22 +113,10 @@ export const Journal = () => {
             }
         } catch (error) {
             setHistory(loadFallbackJournalEntries());
-            setDbNotice(getFallbackStorageMode() === 'memory' ? t('dbFallbackSession') : t('dbFallbackMode'));
-            if (error instanceof Error) {
-                if (error.message === DB_ERRORS.blocked) {
-                    setAnalysisError(t('dbBlocked'));
-                } else if (error.message === DB_ERRORS.timeout) {
-                    setAnalysisError(t('dbTimeout'));
-                } else if (error.name === 'NotFoundError' || error.message.includes('object stores')) {
-                    setAnalysisError(t('dbMissingStore'));
-                } else {
-                    setAnalysisError(t('saveFailed'));
-                }
-            } else {
-                setAnalysisError(t('saveFailed'));
-            }
+            setFallbackNotice();
+            setAnalysisError(null);
         }
-    }, [maybeRecoverFallbackData, t]);
+    }, [maybeRecoverFallbackData, setFallbackNotice]);
 
     useEffect(() => {
         loadHistory();
@@ -175,9 +156,9 @@ export const Journal = () => {
                 setDbNotice(null);
             } catch (error) {
                 useFallback = true;
-                setAnalysisError(resolveDbErrorMessage(error));
+                setAnalysisError(null);
                 setHistory(saveFallbackJournalEntry(entry));
-                setDbNotice(getFallbackStorageMode() === 'memory' ? t('dbFallbackSession') : t('dbFallbackMode'));
+                setFallbackNotice();
             }
 
             if (!useFallback && db) {
@@ -198,9 +179,9 @@ export const Journal = () => {
                 } catch (error) {
                     if (isDbFailure(error)) {
                         useFallback = true;
-                        setAnalysisError(resolveDbErrorMessage(error));
+                        setAnalysisError(null);
                         setHistory(saveFallbackJournalEntry(entry));
-                        setDbNotice(getFallbackStorageMode() === 'memory' ? t('dbFallbackSession') : t('dbFallbackMode'));
+                        setFallbackNotice();
                     } else {
                         throw error;
                     }
@@ -289,8 +270,8 @@ export const Journal = () => {
             console.error('Failed to save', error);
             setStatus('error');
             if (isDbFailure(error)) {
-                setDbNotice(t('dbFallbackMode'));
-                setAnalysisError(resolveDbErrorMessage(error));
+                setFallbackNotice();
+                setAnalysisError(null);
             } else if (error instanceof Error) {
                 setAnalysisError(error.message || t('saveFailed'));
             } else {
