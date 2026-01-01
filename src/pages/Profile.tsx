@@ -109,6 +109,9 @@ export const Profile = () => {
     const [rebuildMessage, setRebuildMessage] = useState<string | null>(null);
     const [isResettingDb, setIsResettingDb] = useState(false);
     const [resetMessage, setResetMessage] = useState<string | null>(null);
+    const [showAllArchetypes, setShowAllArchetypes] = useState(false);
+    const [showAllPatterns, setShowAllPatterns] = useState(false);
+    const [showAllQuestions, setShowAllQuestions] = useState(false);
 
     const loadData = useCallback(async () => {
         try {
@@ -329,6 +332,13 @@ export const Profile = () => {
     const uniqueArchetypes = Array.from(new Set(safeInsights.flatMap(i => i.archetypes || []))).map(a => a?.trim()).filter(Boolean);
     const uniquePatterns = Array.from(new Set(safeInsights.flatMap(i => i.hiddenPatterns || []))).map(p => p?.trim()).filter(Boolean);
     const uniqueQuestions = Array.from(new Set(safeInsights.flatMap(i => i.criticalQuestions || []))).map(q => q?.trim()).filter(Boolean);
+    const listLimit = 10;
+    const visibleArchetypes = showAllArchetypes ? uniqueArchetypes : uniqueArchetypes.slice(0, listLimit);
+    const visiblePatterns = showAllPatterns ? uniquePatterns : uniquePatterns.slice(0, listLimit);
+    const visibleQuestions = showAllQuestions ? uniqueQuestions : uniqueQuestions.slice(0, listLimit);
+    const hiddenArchetypeCount = Math.max(uniqueArchetypes.length - visibleArchetypes.length, 0);
+    const hiddenPatternCount = Math.max(uniquePatterns.length - visiblePatterns.length, 0);
+    const hiddenQuestionCount = Math.max(uniqueQuestions.length - visibleQuestions.length, 0);
 
     return (
         <div className="max-w-6xl mx-auto space-y-12 pb-20">
@@ -412,11 +422,22 @@ export const Profile = () => {
                         <div className="grid md:grid-cols-2 gap-12">
                             {uniqueArchetypes.length > 0 && (
                                 <div className="space-y-6">
-                                    <h3 className="text-muted-foreground uppercase text-[10px] font-black tracking-[0.2em] flex items-center gap-2">
-                                        <Target size={14} className="text-primary" /> {t('archetypesIdentified')}
-                                    </h3>
+                                    <div className="flex items-center justify-between gap-3">
+                                        <h3 className="text-muted-foreground uppercase text-[10px] font-black tracking-[0.2em] flex items-center gap-2">
+                                            <Target size={14} className="text-primary" /> {t('archetypesIdentified')}
+                                        </h3>
+                                        {hiddenArchetypeCount > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowAllArchetypes(prev => !prev)}
+                                                className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline underline-offset-4"
+                                            >
+                                                {showAllArchetypes ? t('showLess') : `${t('showAll')} (${hiddenArchetypeCount})`}
+                                            </button>
+                                        )}
+                                    </div>
                                     <div className="flex flex-wrap gap-3">
-                                        {uniqueArchetypes.map(arch => (
+                                        {visibleArchetypes.map(arch => (
                                             <Badge key={arch} variant="secondary" className="px-5 py-2 rounded-xl bg-secondary/50 border-border text-foreground font-bold text-sm hover:bg-secondary transition-colors">
                                                 {arch}
                                             </Badge>
@@ -427,11 +448,22 @@ export const Profile = () => {
 
                             {uniquePatterns.length > 0 && (
                                 <div className="space-y-6">
-                                    <h3 className="text-muted-foreground uppercase text-[10px] font-black tracking-[0.2em] flex items-center gap-2">
-                                        <Brain size={14} className="text-primary" /> {t('hiddenPatterns')}
-                                    </h3>
+                                    <div className="flex items-center justify-between gap-3">
+                                        <h3 className="text-muted-foreground uppercase text-[10px] font-black tracking-[0.2em] flex items-center gap-2">
+                                            <Brain size={14} className="text-primary" /> {t('hiddenPatterns')}
+                                        </h3>
+                                        {hiddenPatternCount > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowAllPatterns(prev => !prev)}
+                                                className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline underline-offset-4"
+                                            >
+                                                {showAllPatterns ? t('showLess') : `${t('showAll')} (${hiddenPatternCount})`}
+                                            </button>
+                                        )}
+                                    </div>
                                     <div className="space-y-3">
-                                        {uniquePatterns.map(pattern => (
+                                        {visiblePatterns.map(pattern => (
                                             <div key={pattern} className="p-4 bg-background/40 rounded-2xl border border-border group hover:border-primary/30 transition-all font-medium leading-relaxed">
                                                 <span className="text-muted-foreground group-hover:text-foreground transition-colors">{pattern}</span>
                                             </div>
@@ -443,11 +475,22 @@ export const Profile = () => {
 
                          {uniqueQuestions.length > 0 && (
                             <div className="pt-10 border-t border-border">
-                                <h3 className="text-destructive/80 uppercase text-[10px] font-black tracking-[0.2em] mb-6 flex items-center gap-2">
-                                    <ShieldAlert size={14} /> {t('criticalQuestions')}
-                                </h3>
+                                <div className="flex items-center justify-between gap-3 mb-6">
+                                    <h3 className="text-destructive/80 uppercase text-[10px] font-black tracking-[0.2em] flex items-center gap-2">
+                                        <ShieldAlert size={14} /> {t('criticalQuestions')}
+                                    </h3>
+                                    {hiddenQuestionCount > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowAllQuestions(prev => !prev)}
+                                            className="text-[10px] font-black uppercase tracking-widest text-destructive/80 hover:text-destructive hover:underline underline-offset-4"
+                                        >
+                                            {showAllQuestions ? t('showLess') : `${t('showAll')} (${hiddenQuestionCount})`}
+                                        </button>
+                                    )}
+                                </div>
                                 <div className="grid sm:grid-cols-2 gap-4">
-                                    {uniqueQuestions.map(q => (
+                                    {visibleQuestions.map(q => (
                                         <div key={q} className="p-6 pl-8 bg-destructive/5 border border-destructive/10 text-foreground rounded-2xl text-sm italic leading-relaxed hover:bg-destructive/10 transition-colors relative group">
                                             <div className="absolute left-0 top-0 w-1.5 h-full bg-destructive/20 group-hover:bg-destructive/40 transition-colors rounded-l-2xl" />
                                             {q}
@@ -655,7 +698,7 @@ interface SkillSectionProps {
 const SkillSection = ({ title, items, icon: Icon, iconColor, emptyMsg }: SkillSectionProps) => {
     const { t } = useLanguage();
     const [expanded, setExpanded] = useState(false);
-    const limit = 12;
+    const limit = 10;
     const visibleItems = expanded ? items : items.slice(0, limit);
     const hiddenCount = Math.max(items.length - visibleItems.length, 0);
     const totalMarkers = items.reduce((sum, item) => sum + (item.count || 1), 0);
