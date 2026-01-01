@@ -200,6 +200,63 @@ export const addFallbackInsight = (insight: Insight): Insight[] => {
   return next;
 };
 
+export const replaceFallbackJournalEntries = (entries: JournalEntry[]): JournalEntry[] => {
+  const map = new Map<string, JournalEntry>();
+  for (const item of entries) {
+    const normalized = toJournalEntry(item);
+    if (!normalized) continue;
+    map.set(normalized.id, normalized);
+  }
+  const next = Array.from(map.values())
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .slice(0, 200);
+  setStorageValue(FALLBACK_KEYS.journal, JSON.stringify(next));
+  return next;
+};
+
+export const replaceFallbackSkills = (items: Skill[]): Skill[] => {
+  const map = new Map<string, { skill: Skill; sourceIds: Set<string> }>();
+  for (const item of items) {
+    const normalized = toSkill(item);
+    if (!normalized) continue;
+    const key = normalized.name.toLowerCase();
+    const sourceIds = new Set(normalized.sourceEntryIds ?? []);
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, { skill: normalized, sourceIds });
+      continue;
+    }
+    for (const id of sourceIds) {
+      existing.sourceIds.add(id);
+    }
+    const existingTime = existing.skill.lastModified ?? existing.skill.createdAt ?? 0;
+    const nextTime = normalized.lastModified ?? normalized.createdAt ?? 0;
+    if (nextTime >= existingTime) {
+      existing.skill = { ...normalized, sourceEntryIds: Array.from(existing.sourceIds) };
+    }
+  }
+  const next = Array.from(map.values()).map((value) => ({
+    ...value.skill,
+    sourceEntryIds: Array.from(value.sourceIds),
+  }));
+  setStorageValue(FALLBACK_KEYS.skills, JSON.stringify(next));
+  return next;
+};
+
+export const replaceFallbackInsights = (items: Insight[]): Insight[] => {
+  const map = new Map<string, Insight>();
+  for (const item of items) {
+    const normalized = toInsight(item);
+    if (!normalized) continue;
+    map.set(normalized.id, normalized);
+  }
+  const next = Array.from(map.values())
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .slice(0, 100);
+  setStorageValue(FALLBACK_KEYS.insights, JSON.stringify(next));
+  return next;
+};
+
 export const clearFallbackData = () => {
   removeStorageValue(FALLBACK_KEYS.journal);
   removeStorageValue(FALLBACK_KEYS.skills);

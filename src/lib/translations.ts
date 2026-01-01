@@ -60,6 +60,10 @@ export const translations = {
     intelligenceMarkers: "Intelligence Markers",
     showAll: "Show all",
     showLess: "Show less",
+    exportFallbackWarning: "Local-only fallback data detected. It may be incomplete or unstable. Export anyway?",
+    exportDbUnavailable: "Database unavailable. Only local fallback data will be exported. Continue?",
+    importFallbackWarning: "This backup includes local fallback data. It may be unstable or create duplicates. Import anyway?",
+    importFallbackOnly: "Database unavailable. Data restored to local fallback only.",
 
     // Profile
     profileTitle: "My Profile",
@@ -153,6 +157,10 @@ export const translations = {
     intelligenceMarkers: "인텔리전스 마커",
     showAll: "모두 보기",
     showLess: "접기",
+    exportFallbackWarning: "로컬 폴백 데이터가 포함되어 있습니다. 불완전하거나 불안정할 수 있습니다. 그래도 내보낼까요?",
+    exportDbUnavailable: "데이터베이스를 사용할 수 없습니다. 로컬 폴백 데이터만 내보냅니다. 계속할까요?",
+    importFallbackWarning: "이 백업에는 로컬 폴백 데이터가 포함되어 있습니다. 불안정하거나 중복이 생길 수 있습니다. 계속할까요?",
+    importFallbackOnly: "데이터베이스를 사용할 수 없어 로컬 폴백으로만 복원했습니다.",
 
     // Profile
     profileTitle: "나의 프로필",

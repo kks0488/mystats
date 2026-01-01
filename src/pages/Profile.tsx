@@ -40,6 +40,9 @@ import {
   loadFallbackJournalEntries,
   upsertFallbackSkill,
   addFallbackInsight,
+  replaceFallbackJournalEntries,
+  replaceFallbackSkills,
+  replaceFallbackInsights,
   clearFallbackSkills,
   clearFallbackInsights,
 } from '../db/fallback';
@@ -96,6 +99,44 @@ const aggregateSkills = (items: Skill[]): SkillSummary[] => {
             if (timeDiff !== 0) return timeDiff;
             return a.name.localeCompare(b.name);
         });
+};
+
+const mergeById = <T extends { id?: string }>(items: T[]) => {
+    const map = new Map<string, T>();
+    for (const item of items) {
+        if (!item || typeof item !== 'object') continue;
+        const id = item.id;
+        if (typeof id !== 'string' || !id.trim()) continue;
+        map.set(id, item);
+    }
+    return Array.from(map.values());
+};
+
+const mergeSkillsByName = (items: Skill[]): Skill[] => {
+    const map = new Map<string, { skill: Skill; sourceIds: Set<string> }>();
+    for (const item of items) {
+        if (!item || typeof item.name !== 'string') continue;
+        const key = normalizeSkillName(item.name);
+        if (!key) continue;
+        const sourceIds = new Set(item.sourceEntryIds ?? []);
+        const existing = map.get(key);
+        if (!existing) {
+            map.set(key, { skill: item, sourceIds });
+            continue;
+        }
+        for (const id of sourceIds) {
+            existing.sourceIds.add(id);
+        }
+        const existingTime = existing.skill.lastModified ?? existing.skill.createdAt ?? 0;
+        const nextTime = item.lastModified ?? item.createdAt ?? 0;
+        if (nextTime >= existingTime) {
+            existing.skill = item;
+        }
+    }
+    return Array.from(map.values()).map((value) => ({
+        ...value.skill,
+        sourceEntryIds: Array.from(value.sourceIds),
+    }));
 };
 
 export const Profile = () => {
@@ -272,8 +313,48 @@ export const Profile = () => {
     const handleExport = async () => {
         try {
             setIsExporting(true);
-            const data = await exportAllData();
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            let data: Record<string, any[]> = { journal: [], skills: [], solutions: [], insights: [] };
+            let dbAvailable = true;
+            try {
+                data = await exportAllData();
+            } catch (err) {
+                console.warn('Export failed from DB, falling back', err);
+                dbAvailable = false;
+            }
+            const fallback = {
+                journal: loadFallbackJournalEntries(),
+                skills: loadFallbackSkills(),
+                insights: loadFallbackInsights(),
+            };
+            const hasFallback = fallback.journal.length > 0 || fallback.skills.length > 0 || fallback.insights.length > 0;
+            let includeFallback = hasFallback;
+
+            if (!dbAvailable) {
+                const confirmExport = window.confirm(t('exportDbUnavailable'));
+                if (!confirmExport) {
+                    setIsExporting(false);
+                    return;
+                }
+            } else if (hasFallback) {
+                const confirmExport = window.confirm(t('exportFallbackWarning'));
+                if (!confirmExport) {
+                    includeFallback = false;
+                }
+            }
+
+            const payload = {
+                meta: {
+                    version: 2,
+                    exportedAt: new Date().toISOString(),
+                    sources: {
+                        indexeddb: dbAvailable,
+                        fallback: includeFallback && hasFallback,
+                    },
+                },
+                ...data,
+                fallback: includeFallback ? fallback : { journal: [], skills: [], insights: [] },
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -304,10 +385,54 @@ export const Profile = () => {
         const reader = new FileReader();
         reader.onload = async (event) => {
             try {
-                const data = JSON.parse(event.target?.result as string);
-                await importAllData(data);
-                alert(language === 'ko' ? "데이터 복원이 완료되었습니다." : "Data restoration complete.");
-                loadData(); // Refresh UI
+                const raw = JSON.parse(event.target?.result as string);
+                const data = raw && typeof raw === 'object' ? raw : {};
+                const baseData = {
+                    journal: Array.isArray(data.journal) ? data.journal : [],
+                    skills: Array.isArray(data.skills) ? data.skills : [],
+                    solutions: Array.isArray(data.solutions) ? data.solutions : [],
+                    insights: Array.isArray(data.insights) ? data.insights : [],
+                };
+                const fallbackData = data.fallback && typeof data.fallback === 'object'
+                    ? {
+                        journal: Array.isArray(data.fallback.journal) ? data.fallback.journal : [],
+                        skills: Array.isArray(data.fallback.skills) ? data.fallback.skills : [],
+                        insights: Array.isArray(data.fallback.insights) ? data.fallback.insights : [],
+                    }
+                    : { journal: [], skills: [], insights: [] };
+                const hasFallback = fallbackData.journal.length || fallbackData.skills.length || fallbackData.insights.length;
+
+                let mergedJournal = mergeById<JournalEntry>([...baseData.journal, ...fallbackData.journal] as JournalEntry[]);
+                let mergedSkills = mergeSkillsByName([...baseData.skills, ...fallbackData.skills] as Skill[]);
+                let mergedInsights = mergeById<Insight>([...baseData.insights, ...fallbackData.insights] as Insight[]);
+                const mergedSolutions = mergeById(baseData.solutions as { id?: string }[]);
+
+                if (hasFallback) {
+                    const confirmFallback = window.confirm(t('importFallbackWarning'));
+                    if (!confirmFallback) {
+                        mergedJournal = mergeById<JournalEntry>(baseData.journal as JournalEntry[]);
+                        mergedSkills = mergeSkillsByName(baseData.skills as Skill[]);
+                        mergedInsights = mergeById<Insight>(baseData.insights as Insight[]);
+                    }
+                }
+
+                try {
+                    await importAllData({
+                        journal: mergedJournal,
+                        skills: mergedSkills,
+                        solutions: mergedSolutions,
+                        insights: mergedInsights,
+                    });
+                    alert(language === 'ko' ? "데이터 복원이 완료되었습니다." : "Data restoration complete.");
+                    loadData();
+                } catch (err) {
+                    console.warn('DB import failed. Saving to fallback only.', err);
+                    replaceFallbackJournalEntries(mergedJournal);
+                    replaceFallbackSkills(mergedSkills);
+                    replaceFallbackInsights(mergedInsights);
+                    alert(t('importFallbackOnly'));
+                    loadData();
+                }
             } catch (err) {
                 console.error("Import failed:", err);
                 alert(language === 'ko' ? "파일 형식이 올바르지 않습니다." : "Invalid file format.");
