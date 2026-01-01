@@ -1,0 +1,12 @@
+[
+  { "id": "hist-006", "content": "스케치업으로 창고 도면을 그리는 작업은 즐겁다. 복잡한 물류 동선을 시각화하고 최적의 경로를 찾는 것, 이건 게임 맵을 디자인하는 것과 본질적으로 같다.", "timestamp": 1451606400000, "type": "journal", "lastModified": 1451606400000 },
+  { "id": "insight-006", "entryId": "hist-006", "archetypes": ["Logistics Vizier"], "hiddenPatterns": ["가상 공간 경험을 물리적 공간 최적화로 연결"], "criticalQuestions": ["디자인의 아름다움보다 '효율의 극대화'에 우선순위를 두고 있는가?"], "timestamp": 1451606400000, "lastModified": 1451606400000 },
+  { "id": "hist-007", "content": "오렌지팩토리에서 대규모 땡처리 행사를 기획했다. 수만 점의 의류가 단 며칠 만에 빠져나가는 속도감. 사람들이 몰려들고 현금이 도는 그 에너지가 나를 움직이게 한다.", "timestamp": 1514764800000, "type": "journal", "lastModified": 1514764800000 },
+  { "id": "insight-007", "entryId": "hist-007", "archetypes": ["High-Velocity Trader"], "hiddenPatterns": ["대규모 트래픽과 물동량에서의 쾌감", "단기 목표 달성에 특화된 집중력"], "criticalQuestions": ["폭발적인 이벤트 이후의 '데이터 분석'과 '사후 관리' 시스템이 존재하는가?"], "timestamp": 1514764800000, "lastModified": 1514764800000 },
+  { "id": "hist-008", "content": "쿠팡에서 가품 소명 요청이 왔다. 법률 조항을 뒤지고 증거 자료를 정리하는 과정에서 오히려 머리가 맑아진다. 논리적으로 상대를 압도하고 내 정당성을 입증하는 것, 이건 비즈니스의 또 다른 재미다.", "timestamp": 1609459200000, "type": "journal", "lastModified": 1609459200000 },
+  { "id": "insight-008", "entryId": "hist-008", "archetypes": ["Legal Strategist", "Logician"], "hiddenPatterns": ["위기를 지적 유희로 전환하는 능력", "절차적 허점을 파고드는 정밀함"], "criticalQuestions": ["에너지를 방어(소명)뿐만 아니라 선제적 시스템 구축(Defense System)에 쓰고 있는가?"], "timestamp": 1609459200000, "lastModified": 1609459200000 },
+  { "id": "hist-009", "content": "반복되는 엑셀 작업과 송장 출력 작업이 너무 괴롭다. 내가 왜 이런 사소한 일에 시간을 써야 하나? 이건 내가 할 일이 아니다. 시스템이 하거나, AI가 하게 만들어야 한다. 나는 '기획'과 '결정'만 하고 싶다.", "timestamp": 1640995200000, "type": "journal", "lastModified": 1640995200000 },
+  { "id": "insight-009", "entryId": "hist-009", "archetypes": ["Automation Seeker"], "hiddenPatterns": ["단조로운 운영 업무에 대한 극심한 피로", "효율적 아키텍처에 대한 갈망"], "criticalQuestions": ["진정으로 '자동화'하고 싶은 업무 리스트 3가지는 무엇인가?"], "timestamp": 1640995200000, "lastModified": 1640995200000 },
+  { "id": "hist-010", "content": "무자크(Muzak) 신규 라인업이 들어온다. 여성 의류는 속도가 생명이다. 이번에는 외부 셀러들을 모아서 라이브 방송으로 밀어붙일 생각이다. 내가 다 하려 하지 말고, 잘하는 사람들에게 판을 깔아주자.", "timestamp": 1704067200000, "type": "journal", "lastModified": 1704067200000 },
+  { "id": "insight-010", "entryId": "hist-010", "archetypes": ["Eco-system Builder"], "hiddenPatterns": ["본인 실행력의 한계를 인정하고 레버리지 활용"], "criticalQuestions": ["셀러들에게 제공할 '거절할 수 없는 제안'은 무엇인가?"], "timestamp": 1704067200000, "lastModified": 1704067200000 }
+]

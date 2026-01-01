@@ -1,0 +1,82 @@
+[
+  {
+    "id": "hist-001",
+    "content": "GTA5 Machinima 영화 제작 프로젝트를 마쳤다. 공간을 배치하고 카메라 워킹을 조절하는 과정에서 시간 가는 줄 몰랐다. 3D 공간에서의 구도 감각은 확실히 내 강점이다. 스케치업과 포토샵을 단순히 도구로 쓰는 게 아니라, 내 머릿속의 이미지를 구체화하는 수단으로 쓰고 있다.",
+    "timestamp": 1420070400000,
+    "type": "journal",
+    "lastModified": 1420070400000
+  },
+  {
+    "id": "insight-001",
+    "entryId": "hist-001",
+    "archetypes": ["Creative Architect", "Spatial Intuitive"],
+    "hiddenPatterns": ["상상력을 기술적 도구로 즉각 변환하는 능력", "3D 공간 인지 기반의 문제 해결 성향"],
+    "criticalQuestions": ["기술적 숙련도를 넘어, 이 공간 감각을 비즈니스 구조(Logistics/Layout)로 전이할 수 있는가?"],
+    "timestamp": 1420070400000,
+    "lastModified": 1420070400000
+  },
+  {
+    "id": "hist-002",
+    "content": "오렌지팩토리 실질 경영에 깊이 관여하기 시작했다. 산더미처럼 쌓인 재고를 보면 압도되기 마련인데, 나는 이 재고를 어떻게 현금화할 것인가에 대한 전략이 먼저 떠오른다. 땡처리 시장의 논리는 냉혹하지만 명쾌하다. 숫자가 아닌 'vibe'와 'timing'의 싸움이다.",
+    "timestamp": 1483228800000,
+    "type": "journal",
+    "lastModified": 1483228800000
+  },
+  {
+    "id": "insight-002",
+    "entryId": "hist-002",
+    "archetypes": ["Liquidation Strategist", "Market Intuitive"],
+    "hiddenPatterns": ["대량의 데이터를 직관적인 시장 흐름으로 파악", "위기 상황에서의 공격적 의사결정"],
+    "criticalQuestions": ["실행 속도가 빠른 만큼, 정밀한 마감 프로세스를 시스템화할 수 있는가?"],
+    "timestamp": 1483228800000,
+    "lastModified": 1483228800000
+  },
+  {
+    "id": "hist-003",
+    "content": "케이스위스(K-Swiss) 광고비 지출이 매출의 1/3을 넘어섰다. 플랫폼의 광고 구좌 낙찰가는 계속 오르는데, 내 마진은 깎여간다. 이건 전쟁터다. 온라인 광고 클릭에 의존하는 방식은 더 이상 지속 가능하지 않다. 오프라인 유휴 자산을 활용한 돌파구가 필요하다.",
+    "timestamp": 1672531200000,
+    "type": "journal",
+    "lastModified": 1672531200000
+  },
+  {
+    "id": "insight-003",
+    "entryId": "hist-003",
+    "archetypes": ["Crisis Manager", "Systems Thinker"],
+    "hiddenPatterns": ["외부 플랫폼 의존성의 위험 감지", "자산 활용 극대화를 통한 비용 절감 본능"],
+    "criticalQuestions": ["광고비 제로(Zero-Ad) 전략을 위해 필요한 핵심 인프라는 무엇인가?"],
+    "timestamp": 1672531200000,
+    "lastModified": 1672531200000
+  },
+  {
+    "id": "hist-004",
+    "content": "시흥 라이브센터 부지를 둘러봤다. 6년 동안 비어있던 이 공간이 나에겐 최고의 실험실로 보인다. 라이브 커머스와 창고형 매장의 결합. 남들이 인테리어를 고민할 때 나는 물류 동선과 셀러 공급 체인을 고민한다. 지루한 반복 작업은 AI와 시스템에 맡기고, 나는 판을 짜는 데 집중해야 한다.",
+    "timestamp": 1698796800000,
+    "type": "journal",
+    "lastModified": 1698796800000
+  },
+  {
+    "id": "insight-004",
+    "entryId": "hist-004",
+    "archetypes": ["Neural Architect", "Platform Operator"],
+    "hiddenPatterns": ["유휴 자산의 가치 재발견", "반복 업무 회피를 위한 시스템 구축 욕구"],
+    "criticalQuestions": ["'재미'가 사라진 운영 단계에서도 시스템이 스스로 돌아가게 설계되었는가?"],
+    "timestamp": 1698796800000,
+    "lastModified": 1698796800000
+  },
+  {
+    "id": "hist-005",
+    "content": "ADHD 성향에 대해 깊이 이해하게 되었다. 내가 왜 완벽하게 준비하느라 시작을 못 했는지, 왜 재미가 없으면 마무리가 안 되는지 이제야 퍼즐이 맞춰진다. 이제는 내 성향을 고치려 하기보다, 내 성향에 맞는 '비즈니스 인터페이스'를 구축하는 데 집중하겠다.",
+    "timestamp": 1701388800000,
+    "type": "journal",
+    "lastModified": 1701388800000
+  },
+  {
+    "id": "insight-005",
+    "entryId": "hist-005",
+    "archetypes": ["Self-Aware Strategist", "High-Energy Initiator"],
+    "hiddenPatterns": ["내적 인지 구조를 사업적 자산으로 전환", "마감 공포를 시스템적 강제로 해결하려는 시도"],
+    "criticalQuestions": ["내 에너지가 가장 폭발적인 '기획' 단계의 결과물을 어떻게 '마감'으로 자동 연결할 것인가?"],
+    "timestamp": 1701388800000,
+    "lastModified": 1701388800000
+  }
+]

@@ -1,0 +1,124 @@
+export const translations = {
+  en: {
+    // Sidebar
+    navDashboard: "Dashboard",
+    navJournal: "Journal",
+    navStrategy: "Strategy",
+    navProfile: "Profile",
+    settings: "Settings",
+
+    // Home
+    dashboardTitle: "Dashboard",
+    dashboardDesc: "Your personal growth, quantified and analyzed.",
+    totalEntries: "Total Entries",
+    skillsTraits: "Skills & Traits",
+    aiInsights: "AI Insights",
+    configuration: "Configuration",
+    setupEnv: "Setup your local AI environment.",
+    enterApiKey: "Enter Google Gemini API Key",
+    saveKey: "Save Key",
+    apiKeyNote: "Your API key is stored only in your browser's local storage.",
+    getApiKey: "Get your free API Key here →",
+    language: "Language",
+
+    // Journal
+    journalTitle: "Journal",
+    journalDesc: "Pour your thoughts out. We'll find patterns.",
+    journalPlaceholder: "Describe yourself freely...\n- What jobs or roles have you had?\n- What do you enjoy doing?\n- What are you good at?\n- What do you struggle with?",
+    analyzing: "Analyzing...",
+    analyzeSave: "Analyze & Save",
+    saved: "Saved!",
+    noApiKeyWarning: "No API Key found. Entries will be saved but not analyzed.",
+    charCount: "characters",
+
+    // Profile
+    profileTitle: "My Profile",
+    profileDesc: "The collection of your capabilities and hidden patterns.",
+    deepInsights: "Deep Insights & Archetypes",
+    deepInsightsDesc: "AI-extracted psychological patterns from your journals.",
+    archetypesIdentified: "Archetypes Identified",
+    hiddenPatterns: "Hidden Patterns",
+    criticalQuestions: "Critical Questions to Ask Yourself",
+    noItemsYet: "No identified items yet. Start journaling!",
+    expRoles: "Experiences & Roles",
+    hardSkills: "Hard Skills",
+    softSkills: "Soft Skills",
+    interestsLikes: "Interests & Likes",
+    traitsChars: "Traits & Characteristics",
+
+    // Strategist
+    strategistTitle: "Strategist",
+    strategistDesc: "Use your unique strengths to solve your current challenges.",
+    problemGoalTitle: "What's the problem or goal?",
+    problemGoalDesc: "Be specific about what you're facing.",
+    problemPlaceholder: "e.g. I need to lead a project but I'm afraid of public speaking...",
+    thinking: "Thinking...",
+    generateStrategy: "Generate Strategy",
+    personalizedStrategy: "Your Personalized Strategy",
+    strategistEmptyState: "Describe your challenge on the left to get started.",
+    notEnoughData: "We don't have enough data about you yet. Try adding some journal entries first!",
+    strategyFailed: "Failed to generate solution. Check your API key and try again."
+  },
+  ko: {
+    // Sidebar
+    navDashboard: "대시보드",
+    navJournal: "저널",
+    navStrategy: "전략 구상",
+    navProfile: "프로필",
+    settings: "설정",
+
+    // Home
+    dashboardTitle: "대시보드",
+    dashboardDesc: "당신의 성장을 수치와 분석으로 확인하세요.",
+    totalEntries: "누적 기록",
+    skillsTraits: "스킬 및 특성",
+    aiInsights: "AI 인사이트",
+    configuration: "환경 설정",
+    setupEnv: "로컬 AI 환경을 설정합니다.",
+    enterApiKey: "Google Gemini API 키 입력",
+    saveKey: "키 저장",
+    apiKeyNote: "API 키는 브라우저의 로컬 스토리지에만 저장됩니다.",
+    getApiKey: "여기에서 무료 API 키를 받으세요 →",
+    language: "언어 설정",
+
+    // Journal
+    journalTitle: "오늘의 기록",
+    journalDesc: "생각을 쏟아내세요. AI가 패턴을 찾아드립니다.",
+    journalPlaceholder: "자신에 대해 자유롭게 적어보세요...\n- 어떤 직무나 역할을 수행해 보셨나요?\n- 무엇을 할 때 즐거움을 느끼시나요?\n- 본인의 강점은 무엇인가요?\n- 어떤 부분이 어렵게 느껴지시나요?",
+    analyzing: "분석 중...",
+    analyzeSave: "분석 및 저장",
+    saved: "저장 완료!",
+    noApiKeyWarning: "API 키가 없습니다. 기록은 저장되지만 분석은 진행되지 않습니다.",
+    charCount: "자",
+
+    // Profile
+    profileTitle: "나의 프로필",
+    profileDesc: "당신의 역량과 숨겨진 패턴들을 모아보았습니다.",
+    deepInsights: "심층 인사이트 및 아키타입",
+    deepInsightsDesc: "당신의 기록에서 추출된 심리학적 패턴입니다.",
+    archetypesIdentified: "식별된 아키타입",
+    hiddenPatterns: "숨겨진 패턴",
+    criticalQuestions: "자신에게 던져볼 핵심 질문",
+    noItemsYet: "아직 데이터가 없습니다. 기록을 시작해보세요!",
+    expRoles: "경력 및 역할",
+    hardSkills: "하드 스킬",
+    softSkills: "소프트 스킬",
+    interestsLikes: "관심사 및 취향",
+    traitsChars: "기질 및 특성",
+
+    // Strategist
+    strategistTitle: "전략가",
+    strategistDesc: "당신만의 고유한 강점을 활용해 현재의 고민을 해결하세요.",
+    problemGoalTitle: "어떤 고민이나 목표가 있으신가요?",
+    problemGoalDesc: "직면한 상황을 구체적으로 적어주세요.",
+    problemPlaceholder: "예: 프로젝트 리더를 맡아야 하는데 대중 앞에서 말하는 게 두려워요...",
+    thinking: "전략 구상 중...",
+    generateStrategy: "전략 생성하기",
+    personalizedStrategy: "당신만을 위한 맞춤 전략",
+    strategistEmptyState: "왼쪽에 고민을 적어주시면 전략 생성이 시작됩니다.",
+    notEnoughData: "아직 데이터가 충분하지 않습니다. 일기를 먼저 몇 개 더 작성해 주세요!",
+    strategyFailed: "전략 생성에 실패했습니다. API 키를 확인하고 다시 시도해 주세요."
+  }
+};
+
+export type TranslationKeys = keyof typeof translations.en;
