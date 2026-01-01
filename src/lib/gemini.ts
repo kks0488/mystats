@@ -23,20 +23,50 @@ export const checkGeminiStatus = () => {
   return !!model;
 };
 
-const ANALYSIS_PROMPT = `
+const buildAnalysisPrompt = (language: 'en' | 'ko') => {
+  const languageDirective =
+    language === 'ko'
+      ? 'Respond in KOREAN.'
+      : 'Respond in ENGLISH only. Do NOT include Korean.';
+  const insightRequirement =
+    language === 'ko'
+      ? `**Bilingual Requirement**: 
+ALL output strings in "insight" (archetypes, hiddenPatterns, criticalQuestions) MUST follow the format: 
+"Korean Description (English Translation)"`
+      : `**Language Requirement**:
+All output must be English only. Do NOT include Korean.`;
+  const archetypeFormat =
+    language === 'ko'
+      ? "String (Format: '한글 명칭 (English Title)')"
+      : 'String (English only)';
+  const patternFormat =
+    language === 'ko'
+      ? "String (Format: '당신의 존재는... (Your existence is...)')"
+      : 'String (English only)';
+  const questionFormat =
+    language === 'ko'
+      ? "String (Format: '한글 질문? (English Question?)')"
+      : 'String (English only)';
+
+  return `
 You are an Existential Strategist and Meta-Cognitive Profiler.
-Your task is to decode the "Meta-Strategy" of the user's soul and operational theory. 
+Your task is to decode the "Meta-Strategy" of the user's soul and operational theory.
 Do NOT describe actions. UNMASK intent.
 
-**Bilingual Requirement**: 
-ALL output strings in "insight" (archetypes, hiddenPatterns, criticalQuestions) MUST follow the format: 
-"Korean Description (English Translation)"
-For example: "시스템의 설계자 (The Architect of Systems)" or "당신의 존재는... (Your existence is...)"
+${insightRequirement}
+
+**Classification Rules**:
+- Hard Skills: technical tools, languages, frameworks.
+- Soft Skills: communication, leadership, collaboration.
+- Experiences: concrete roles, positions, projects, or responsibilities.
+- Interests: topics or domains the user is drawn to.
+- Traits: personality qualities (strengths/weaknesses).
+Only use information explicitly present in the input. Avoid poetic or abstract phrases.
 
 Analyze the user through these existential lenses:
-1.  **Semantic Legacy**: What is the "Defining Word" or "Core Equation" that the user is trying to solve across their lifetime (e.g., "Liquidation of Stagnation", "Serialization of Freedom")?
-2.  **The Paradox of Choice**: How does their obsession with building "Perfect Systems" (IoT, MacOS, Automated Life) actually limit their ability to experience the "Unstructured Breakthrough"? 
-3.  **The Non-Linear Ghost**: Where in their career (K-Swiss, YourToy) did they encounter a problem that logic could NOT solve, and how did they mutate their identity to survive it?
+1.  **Semantic Legacy**: What is the "Defining Word" or "Core Equation" that the user is trying to solve across their lifetime?
+2.  **The Paradox of Choice**: How does their obsession with building "Perfect Systems" actually limit their ability to experience the "Unstructured Breakthrough"?
+3.  **The Non-Linear Ghost**: Where in their career did they encounter a problem that logic could NOT solve, and how did they mutate their identity to survive it?
 
 Analyze the text and return a JSON object with this EXACT structure:
 
@@ -47,13 +77,13 @@ Analyze the text and return a JSON object with this EXACT structure:
   "traits": [ { "name": "String", "category": "trait" | "strength" | "weakness" } ],
   "insight": {
     "archetypes": [
-      "String (Format: '한글 명칭 (English Title)')"
+      "${archetypeFormat}"
     ],
     "hiddenPatterns": [
-      "String (Format: '당신의 존재는... (Your existence is...)')"
+      "${patternFormat}"
     ],
     "criticalQuestions": [
-      "String (Format: '한글 질문? (English Question?)')"
+      "${questionFormat}"
     ]
   }
 }
@@ -61,8 +91,11 @@ Analyze the text and return a JSON object with this EXACT structure:
 Be RUTHLESSLY META-ANALYTICAL. Do not settle for surface-level traits.
 Target the "Silent Core"—the part of the user that remains unchanged between the JSON and the BBQ.
 
+Language: ${languageDirective}
+
 Input Text:
 `;
+};
 
 // --- Zod Schemas ---
 
@@ -113,8 +146,7 @@ export const analyzeEntryWithAI = async (text: string, language: 'en' | 'ko' = '
   
   if (!model) throw new Error("Gemini API not initialized. Please provide an API Key in settings.");
 
-  const languagePrompt = language === 'ko' ? "Respond in KOREAN." : "Respond in ENGLISH.";
-  const finalPrompt = `${ANALYSIS_PROMPT}\n\nLanguage: ${languagePrompt}\n\nInput Text:\n${text}`;
+  const finalPrompt = `${buildAnalysisPrompt(language)}\n\n${text}`;
 
   try {
     const result = await model.generateContent(finalPrompt);

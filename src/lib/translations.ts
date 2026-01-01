@@ -45,6 +45,15 @@ export const translations = {
     dbResetFailed: "Failed to reset database. Check browser storage.",
     dbProfileUnavailable: "Database unavailable. Profile data cannot load.",
     dbProfileFallback: "Database unavailable. Showing local fallback data.",
+    rebuildTitle: "Rebuild AI Profile",
+    rebuildDesc: "Reanalyze all journal entries to regenerate skills, traits, interests, and insights.",
+    rebuildAction: "Reanalyze & Rebuild",
+    rebuildConfirm: "Reanalyze all entries? This will replace existing skills and insights.",
+    rebuildRunning: "Rebuilding...",
+    rebuildDone: "Rebuild complete.",
+    rebuildFailed: "Rebuild failed. Check your API key and try again.",
+    rebuildNoEntries: "No journal entries to analyze yet.",
+    rebuildProgress: "Processing",
     charCount: "characters",
 
     // Profile
@@ -124,6 +133,15 @@ export const translations = {
     dbResetFailed: "데이터베이스 초기화에 실패했습니다. 브라우저 저장소를 확인해 주세요.",
     dbProfileUnavailable: "데이터베이스를 사용할 수 없어 프로필을 불러올 수 없습니다.",
     dbProfileFallback: "데이터베이스를 사용할 수 없어 로컬 데이터를 표시합니다.",
+    rebuildTitle: "AI 프로필 재생성",
+    rebuildDesc: "모든 저널을 다시 분석해 스킬/특성/관심사/인사이트를 재생성합니다.",
+    rebuildAction: "재분석 & 재생성",
+    rebuildConfirm: "모든 기록을 재분석할까요? 기존 스킬/인사이트가 대체됩니다.",
+    rebuildRunning: "재생성 중...",
+    rebuildDone: "재생성이 완료되었습니다.",
+    rebuildFailed: "재생성에 실패했습니다. API 키를 확인해 주세요.",
+    rebuildNoEntries: "분석할 저널이 없습니다.",
+    rebuildProgress: "처리 중",
     charCount: "자",
 
     // Profile

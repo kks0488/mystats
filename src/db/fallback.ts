@@ -151,3 +151,11 @@ export const clearFallbackData = () => {
   localStorage.removeItem(FALLBACK_KEYS.skills);
   localStorage.removeItem(FALLBACK_KEYS.insights);
 };
+
+export const clearFallbackSkills = () => {
+  localStorage.removeItem(FALLBACK_KEYS.skills);
+};
+
+export const clearFallbackInsights = () => {
+  localStorage.removeItem(FALLBACK_KEYS.insights);
+};

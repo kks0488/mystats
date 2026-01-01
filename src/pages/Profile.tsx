@@ -3,8 +3,10 @@ import {
   getDB, 
   exportAllData, 
   importAllData, 
+  upsertSkill,
   type Skill, 
-  type Insight 
+  type Insight,
+  type JournalEntry
 } from '../db/db';
 import { 
   Sparkles, 
@@ -30,7 +32,16 @@ import { useLanguage } from '../hooks/useLanguage';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { loadFallbackSkills, loadFallbackInsights } from '../db/fallback';
+import { analyzeEntryWithAI, checkAIStatus } from '../lib/ai-provider';
+import {
+  loadFallbackSkills,
+  loadFallbackInsights,
+  loadFallbackJournalEntries,
+  upsertFallbackSkill,
+  addFallbackInsight,
+  clearFallbackSkills,
+  clearFallbackInsights,
+} from '../db/fallback';
 
 export const Profile = () => {
     const { t, language } = useLanguage();
@@ -38,6 +49,9 @@ export const Profile = () => {
     const [insights, setInsights] = useState<Insight[]>([]);
     const [isExporting, setIsExporting] = useState(false);
     const [dbNotice, setDbNotice] = useState<string | null>(null);
+    const [isRebuilding, setIsRebuilding] = useState(false);
+    const [rebuildProgress, setRebuildProgress] = useState<{ current: number; total: number } | null>(null);
+    const [rebuildMessage, setRebuildMessage] = useState<string | null>(null);
 
     const loadData = useCallback(async () => {
         try {
@@ -47,8 +61,8 @@ export const Profile = () => {
             setSkills(allSkills);
             setInsights(allInsights);
             setDbNotice(null);
-        } catch (error) {
-            console.warn('Failed to load profile data', error);
+        } catch {
+            console.warn('Failed to load profile data');
             const fallbackSkills = loadFallbackSkills();
             const fallbackInsights = loadFallbackInsights();
             setSkills(fallbackSkills);
@@ -60,6 +74,108 @@ export const Profile = () => {
             );
         }
     }, [t]);
+
+    const handleRebuildProfile = useCallback(async () => {
+        const confirmed = window.confirm(t('rebuildConfirm'));
+        if (!confirmed) return;
+
+        const aiStatus = checkAIStatus();
+        if (!aiStatus.configured) {
+            setRebuildMessage(t('apiKeyRequired'));
+            return;
+        }
+
+        setIsRebuilding(true);
+        setRebuildMessage(t('rebuildRunning'));
+        setRebuildProgress(null);
+
+        let entries: JournalEntry[] = [];
+        let useFallback = false;
+        let db = null as Awaited<ReturnType<typeof getDB>> | null;
+
+        try {
+            db = await getDB();
+            entries = await db.getAll('journal');
+        } catch {
+            entries = loadFallbackJournalEntries();
+            useFallback = true;
+            if (!entries.length) {
+                setIsRebuilding(false);
+                setRebuildMessage(t('rebuildNoEntries'));
+                return;
+            }
+        }
+
+        if (!entries.length) {
+            setIsRebuilding(false);
+            setRebuildMessage(t('rebuildNoEntries'));
+            return;
+        }
+
+        try {
+            if (useFallback) {
+                clearFallbackSkills();
+                clearFallbackInsights();
+            } else if (db) {
+                const tx = db.transaction(['skills', 'insights'], 'readwrite');
+                await tx.objectStore('skills').clear();
+                await tx.objectStore('insights').clear();
+                await tx.done;
+            }
+
+            const total = entries.length;
+            let current = 0;
+            for (const entry of entries) {
+                current += 1;
+                setRebuildProgress({ current, total });
+                const result = await analyzeEntryWithAI(entry.content, language);
+
+                if (result.insight) {
+                    const insightData: Insight = {
+                        id: crypto.randomUUID(),
+                        entryId: entry.id,
+                        ...result.insight,
+                        timestamp: entry.timestamp,
+                        lastModified: Date.now()
+                    };
+                    if (useFallback) {
+                        addFallbackInsight(insightData);
+                    } else if (db) {
+                        await db.put('insights', insightData);
+                    }
+                }
+
+                const categories: Array<{ items?: { name: string, category?: string }[], defaultCategory?: Skill['category'] }> = [
+                    { items: result.skills, defaultCategory: 'hard' },
+                    { items: result.traits, defaultCategory: 'trait' },
+                    { items: result.experiences, defaultCategory: 'experience' },
+                    { items: result.interests, defaultCategory: 'interest' }
+                ];
+
+                for (const group of categories) {
+                    if (group.items) {
+                        for (const item of group.items) {
+                            const category = (item.category ?? group.defaultCategory) as Skill['category'];
+                            if (useFallback) {
+                                upsertFallbackSkill({ name: item.name, category }, entry.id);
+                            } else {
+                                await upsertSkill({ name: item.name, category }, entry.id);
+                            }
+                        }
+                    }
+                }
+            }
+
+            await loadData();
+            setRebuildMessage(t('rebuildDone'));
+        } catch (error) {
+            console.error('Rebuild failed', error);
+            setRebuildMessage(t('rebuildFailed'));
+        } finally {
+            setIsRebuilding(false);
+            setTimeout(() => setRebuildMessage(null), 6000);
+        }
+    }, [language, loadData, t]);
 
     useEffect(() => {
         loadData();
@@ -316,6 +432,36 @@ export const Profile = () => {
                         </div>
                     </CardHeader>
                     <CardContent className="p-10 pt-0">
+                        <div className="p-8 bg-background/40 rounded-[2rem] border border-border space-y-6 mb-8">
+                            <div className="space-y-2">
+                                <h4 className="font-bold text-lg flex items-center gap-2">
+                                    <Sparkles className="w-5 h-5 text-primary" />
+                                    {t('rebuildTitle')}
+                                </h4>
+                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                    {t('rebuildDesc')}
+                                </p>
+                            </div>
+                            <div className="flex items-center justify-between gap-4">
+                                <Button
+                                    onClick={handleRebuildProfile}
+                                    disabled={isRebuilding}
+                                    className="h-12 px-6 rounded-xl font-bold tracking-tight bg-primary hover:bg-primary/90 disabled:opacity-50"
+                                >
+                                    {isRebuilding ? t('rebuildRunning') : t('rebuildAction')}
+                                </Button>
+                                {rebuildProgress && (
+                                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                                        {t('rebuildProgress')} {rebuildProgress.current}/{rebuildProgress.total}
+                                    </span>
+                                )}
+                            </div>
+                            {rebuildMessage && (
+                                <p className="text-xs font-semibold text-muted-foreground">
+                                    {rebuildMessage}
+                                </p>
+                            )}
+                        </div>
                         <div className="grid sm:grid-cols-2 gap-6">
                             <div className="p-8 bg-background/40 rounded-[2rem] border border-border space-y-6">
                                 <div className="space-y-2">
