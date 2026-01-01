@@ -9,7 +9,13 @@
 </p>
 
 <p align="center">
-  <em>Transform your scattered thoughts into actionable intelligence.<br/>Powered by Google Gemini, built for thinkers who refuse to settle.</em>
+  <em>Transform your scattered thoughts into actionable intelligence.<br/>Powered by Gemini, OpenAI, Claude, and Grok - built for thinkers who refuse to settle.</em>
+</p>
+
+<p align="center">
+  <em>Model lineage: drafted with Gemini, refined with Claude Opus 4.5, finalized with GPT-5.2 Codex.</em>
+  <br/>
+  <em>모델 흐름: Gemini로 초안, Claude Opus 4.5로 다듬고, GPT-5.2 Codex로 마무리.</em>
 </p>
 
 <p align="center">
@@ -23,7 +29,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react" alt="React 19" />
   <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/Gemini%20AI-Powered-4285F4?style=flat-square&logo=google" alt="Gemini AI" />
+  <img src="https://img.shields.io/badge/Multi--AI-Ready-111827?style=flat-square" alt="Multi-AI Ready" />
   <img src="https://img.shields.io/badge/Vite-7-646CFF?style=flat-square&logo=vite" alt="Vite" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT License" />
 </p>
@@ -59,6 +65,13 @@ Write freely. Our AI doesn't just save — it **decodes**. Every entry is analyz
 - Personality Traits & Patterns
 - Hidden Archetypes (e.g., "The Architect of Systems" 시스템의 설계자)
 - Critical Questions you should be asking yourself
+
+### 🤖 **Multi-AI Provider Switch**
+Bring your own API key and choose your brain:
+- Gemini
+- OpenAI
+- Claude
+- Grok
 
 ### 🪞 **Deep Intelligence Profile**
 Your cumulative psychological map — built from every journal entry. See:
@@ -108,8 +121,8 @@ npm run dev
 
 ### Setup
 1. Open the app in your browser (`http://localhost:5173`)
-2. Go to Settings (gear icon)
-3. Enter your Gemini API Key
+2. Go to the Dashboard
+3. Enter your API Key (Gemini, OpenAI, Claude, or Grok)
 4. Start journaling!
 
 ---
@@ -122,7 +135,7 @@ npm run dev
 | **Language** | TypeScript 5.9 (Strict Mode) |
 | **Styling** | Tailwind CSS + shadcn/ui |
 | **Animation** | Framer Motion |
-| **AI Engine** | Google Gemini (gemini-3-flash-preview) |
+| **AI Engine** | Gemini / OpenAI / Claude / Grok (bring your own key) |
 | **Database** | IndexedDB (via idb) |
 | **Validation** | Zod |
 | **Icons** | Lucide React |
@@ -139,7 +152,7 @@ mystats/
 │   │   └── ui/          # shadcn/ui components
 │   ├── db/              # IndexedDB operations
 │   ├── hooks/           # Custom React hooks
-│   ├── lib/             # Gemini AI, utilities
+│   ├── lib/             # Multi-AI providers, utilities
 │   ├── pages/           # Home, Journal, Profile, Strategy
 │   └── App.tsx
 ├── public/
@@ -195,7 +208,10 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## 🙏 Acknowledgements
 
-- [Google Gemini AI](https://ai.google.dev/) for the intelligence engine
+- [Google Gemini](https://ai.google.dev/) for generation
+- [OpenAI](https://platform.openai.com/) for generation
+- [Anthropic Claude](https://www.anthropic.com/) for generation
+- [xAI Grok](https://x.ai/) for generation
 - [shadcn/ui](https://ui.shadcn.com/) for the beautiful components
 - [Framer Motion](https://www.framer.com/motion/) for smooth animations
 - All the open-source contributors who made this possible
