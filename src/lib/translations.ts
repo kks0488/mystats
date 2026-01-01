@@ -55,9 +55,9 @@ export const translations = {
     thinking: "Thinking...",
     generateStrategy: "Generate Strategy",
     personalizedStrategy: "Your Personalized Strategy",
-    strategistEmptyState: "Describe your challenge above to get started.",
-    strategistEmptyStateDesktop: "Describe your challenge on the left to get started.",
-    strategistEmptyStateMobile: "Describe your challenge above to get started.",
+    strategistEmptyState: "Describe your challenge to get started.",
+    strategistEmptyStateDesktop: "Describe your challenge to get started.",
+    strategistEmptyStateMobile: "Describe your challenge to get started.",
     notEnoughData: "We don't have enough data about you yet. Try adding some journal entries first!",
     strategyFailed: "Failed to generate solution. Check your API key and try again."
   },
@@ -117,9 +117,9 @@ export const translations = {
     thinking: "전략 구상 중...",
     generateStrategy: "전략 생성하기",
     personalizedStrategy: "당신만을 위한 맞춤 전략",
-    strategistEmptyState: "왼쪽에 고민을 적어주시면 전략 생성이 시작됩니다.",
-    strategistEmptyStateDesktop: "왼쪽에 고민을 적어주시면 전략 생성이 시작됩니다.",
-    strategistEmptyStateMobile: "위에 고민을 적어주시면 전략 생성이 시작됩니다.",
+    strategistEmptyState: "고민을 적어주시면 전략 생성이 시작됩니다.",
+    strategistEmptyStateDesktop: "고민을 적어주시면 전략 생성이 시작됩니다.",
+    strategistEmptyStateMobile: "고민을 적어주시면 전략 생성이 시작됩니다.",
     notEnoughData: "아직 데이터가 충분하지 않습니다. 일기를 먼저 몇 개 더 작성해 주세요!",
     strategyFailed: "전략 생성에 실패했습니다. API 키를 확인하고 다시 시도해 주세요."
   }
