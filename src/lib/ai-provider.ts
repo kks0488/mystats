@@ -18,26 +18,26 @@ export interface AIConfig {
 export const AI_PROVIDERS: Record<AIProvider, { name: string; models: string[]; defaultModel: string; apiUrl: string }> = {
   gemini: {
     name: 'Google Gemini',
-    models: ['gemini-3-flash-preview', 'gemini-2.5-pro-preview-05-06', 'gemini-2.0-flash'],
+    models: ['gemini-3-flash-preview', 'gemini-3-pro-preview', 'gemini-2.5-flash', 'gemini-2.5-pro'],
     defaultModel: 'gemini-3-flash-preview',
     apiUrl: 'https://generativelanguage.googleapis.com/v1beta',
   },
   openai: {
     name: 'OpenAI',
-    models: ['gpt-5.2-2025-12-11', 'gpt-4o', 'gpt-4o-mini'],
-    defaultModel: 'gpt-5.2-2025-12-11',
+    models: ['gpt-5', 'gpt-5-mini', 'gpt-5-nano', 'gpt-4o', 'gpt-4o-mini'],
+    defaultModel: 'gpt-5',
     apiUrl: 'https://api.openai.com/v1',
   },
   claude: {
     name: 'Anthropic Claude',
-    models: ['claude-opus-4-5@20251101', 'claude-sonnet-4-20250514', 'claude-3-5-sonnet-20241022'],
-    defaultModel: 'claude-opus-4-5@20251101',
+    models: ['claude-opus-4.5-20251124', 'claude-sonnet-4.5-20250929', 'claude-opus-4.1-20250801', 'claude-sonnet-4-20250522'],
+    defaultModel: 'claude-opus-4.5-20251124',
     apiUrl: 'https://api.anthropic.com/v1',
   },
   grok: {
     name: 'xAI Grok',
-    models: ['grok-4-1-fast-reasoning', 'grok-beta'],
-    defaultModel: 'grok-4-1-fast-reasoning',
+    models: ['grok-4', 'grok-4-fast-reasoning', 'grok-4-fast-non-reasoning', 'grok-3'],
+    defaultModel: 'grok-4',
     apiUrl: 'https://api.x.ai/v1',
   },
 };
