@@ -47,6 +47,13 @@ export const Journal = () => {
     });
     const migrationInProgress = useRef(false);
 
+    const normalizeSkillName = (value: string) =>
+        value
+            .trim()
+            .replace(/\s+/g, ' ')
+            .replace(/^[\"'`]+|[\"'`]+$/g, '')
+            .replace(/[.!?;:]+$/g, '');
+
     const setFallbackNotice = useCallback(() => {
         setDbNotice(getFallbackStorageMode() === 'memory' ? t('dbFallbackSession') : t('dbFallbackMode'));
     }, [t]);
@@ -244,13 +251,19 @@ export const Journal = () => {
                         ];
 
                         for (const group of categories) {
+                            const seen = new Set<string>();
                             if (group.items) {
                                 for (const item of group.items) {
+                                    const normalizedName = normalizeSkillName(item.name || '');
+                                    if (!normalizedName || normalizedName.length < 2) continue;
+                                    const key = normalizedName.toLowerCase();
+                                    if (seen.has(key)) continue;
+                                    seen.add(key);
                                     const category = (item.category ?? group.defaultCategory) as Skill['category'];
                                     if (useFallback) {
-                                        upsertFallbackSkill({ name: item.name, category }, entryId);
+                                        upsertFallbackSkill({ name: normalizedName, category }, entryId);
                                     } else {
-                                        await upsertSkill({ name: item.name, category }, entryId);
+                                        await upsertSkill({ name: normalizedName, category }, entryId);
                                     }
                                 }
                             }

@@ -10,7 +10,8 @@ import {
   Settings2,
   LayoutDashboard,
   Cpu,
-  ChevronDown
+  ChevronDown,
+  Circle
 } from 'lucide-react';
 import { getDB } from '../db/db';
 import { 
@@ -25,6 +26,7 @@ import { useLanguage } from '../hooks/useLanguage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { loadFallbackJournalEntries, loadFallbackSkills, loadFallbackInsights } from '../db/fallback';
+import { Link } from 'react-router-dom';
 
 interface StatWidgetProps {
     title: string;
@@ -58,6 +60,7 @@ export const Home = () => {
     const [stats, setStats] = useState({ entries: 0, skills: 0, insights: 0 });
     const [showProviderDropdown, setShowProviderDropdown] = useState(false);
     const [showModelDropdown, setShowModelDropdown] = useState(false);
+    const [aiConfigured, setAiConfigured] = useState(false);
 
     const loadStats = useCallback(async () => {
         try {
@@ -81,6 +84,7 @@ export const Home = () => {
         setProvider(config.provider);
         setApiKey(config.apiKey);
         setSelectedModel(config.model || AI_PROVIDERS[config.provider].defaultModel);
+        setAiConfigured(!!config.apiKey);
         loadStats();
     }, [loadStats]);
 
@@ -98,6 +102,7 @@ export const Home = () => {
         // Load saved API key for this provider
         const savedKey = localStorage.getItem(`${newProvider.toUpperCase()}_API_KEY`) || '';
         setApiKey(savedKey);
+        setAiConfigured(!!savedKey);
         setShowProviderDropdown(false);
     };
 
@@ -107,11 +112,30 @@ export const Home = () => {
             apiKey, 
             model: selectedModel 
         });
+        setAiConfigured(!!apiKey);
         setIsSaved(true);
         setTimeout(() => setIsSaved(false), 2000);
     };
 
     const providerInfo = AI_PROVIDERS[provider];
+    const quickSteps = [
+        {
+            key: 'api',
+            label: t('quickStartApi'),
+            done: aiConfigured,
+        },
+        {
+            key: 'entry',
+            label: t('quickStartEntry'),
+            done: stats.entries > 0,
+        },
+        {
+            key: 'profile',
+            label: t('quickStartProfile'),
+            done: stats.skills > 0 || stats.insights > 0,
+        },
+    ];
+    const completedSteps = quickSteps.filter(step => step.done).length;
 
     return (
         <div className="max-w-6xl mx-auto space-y-12 pb-20">
@@ -152,6 +176,49 @@ export const Home = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card className="bg-primary/5 border-primary/10 backdrop-blur-xl rounded-[2rem] overflow-hidden">
+                    <CardHeader className="p-8 pb-4">
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-primary/10 text-primary rounded-xl">
+                                <ShieldCheck className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-xl font-black tracking-tight">{t('quickStartTitle')}</CardTitle>
+                                <CardDescription className="text-muted-foreground font-semibold">
+                                    {t('quickStartDesc')}
+                                </CardDescription>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-8 pt-2 space-y-6">
+                        <div className="space-y-3">
+                            {quickSteps.map(step => (
+                                <div key={step.key} className="flex items-center gap-3">
+                                    {step.done ? (
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                    ) : (
+                                        <Circle className="w-4 h-4 text-muted-foreground/50" />
+                                    )}
+                                    <span className={cn("text-sm font-semibold", step.done ? "text-foreground" : "text-muted-foreground")}>
+                                        {step.label}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="flex items-center justify-between text-xs font-black uppercase tracking-widest text-muted-foreground">
+                            <span>{t('quickStartProgress')}</span>
+                            <span>{completedSteps}/3</span>
+                        </div>
+                        <div className="flex flex-wrap gap-3">
+                            <Button asChild className="h-10 px-4 rounded-xl font-bold">
+                                <Link to="/journal">{t('quickStartGoJournal')}</Link>
+                            </Button>
+                            <Button asChild variant="outline" className="h-10 px-4 rounded-xl font-bold">
+                                <Link to="/profile">{t('quickStartGoProfile')}</Link>
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
                 <Card className="bg-secondary/20 border-border backdrop-blur-xl rounded-[2rem] overflow-hidden">
                     <CardHeader className="p-8 pb-4">
                         <div className="flex items-center gap-3 mb-2">

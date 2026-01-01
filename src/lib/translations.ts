@@ -20,6 +20,14 @@ export const translations = {
     apiKeyNote: "Your API key is stored only in your browser's local storage.",
     getApiKey: "Get your free API Key here →",
     language: "Language",
+    quickStartTitle: "Quick Start",
+    quickStartDesc: "Finish these steps to unlock your full profile.",
+    quickStartApi: "Add an API key",
+    quickStartEntry: "Write your first journal entry",
+    quickStartProfile: "Review your profile insights",
+    quickStartProgress: "Completed",
+    quickStartGoJournal: "Go to Journal",
+    quickStartGoProfile: "Go to Profile",
 
     // Journal
     journalTitle: "Journal",
@@ -119,6 +127,14 @@ export const translations = {
     apiKeyNote: "API 키는 브라우저의 로컬 스토리지에만 저장됩니다.",
     getApiKey: "여기에서 무료 API 키를 받으세요 →",
     language: "언어 설정",
+    quickStartTitle: "빠른 시작",
+    quickStartDesc: "이 단계들을 완료하면 프로필이 완성됩니다.",
+    quickStartApi: "API 키 추가",
+    quickStartEntry: "첫 번째 저널 작성",
+    quickStartProfile: "프로필 인사이트 확인",
+    quickStartProgress: "완료",
+    quickStartGoJournal: "저널로 이동",
+    quickStartGoProfile: "프로필로 이동",
 
     // Journal
     journalTitle: "오늘의 기록",
