@@ -36,8 +36,14 @@ export const translations = {
     dbTimeout: "Database is taking too long to open. Check browser storage and retry.",
     dbMissingStore: "Database schema is out of sync. Refresh the page and retry.",
     dbFallbackMode: "Database unavailable. Entries are saved locally only.",
+    dbRecovering: "Recovering local entries into the database...",
+    dbRecovered: "Local entries restored to database.",
     dbReset: "Reset DB",
     dbResetConfirm: "Reset local database? This may remove local data.",
+    dbResetting: "Resetting database...",
+    dbResetBlocked: "Reset blocked by another tab. Close other tabs and retry.",
+    dbResetFailed: "Failed to reset database. Check browser storage.",
+    dbProfileUnavailable: "Database unavailable. Profile data cannot load.",
     charCount: "characters",
 
     // Profile
@@ -108,8 +114,14 @@ export const translations = {
     dbTimeout: "데이터베이스 로딩이 지연됩니다. 브라우저 저장소를 확인해 주세요.",
     dbMissingStore: "데이터베이스 스키마가 맞지 않습니다. 새로고침 후 다시 시도해 주세요.",
     dbFallbackMode: "데이터베이스를 사용할 수 없습니다. 이 브라우저에만 임시 저장됩니다.",
+    dbRecovering: "로컬 기록을 데이터베이스로 복구 중입니다...",
+    dbRecovered: "로컬 기록을 데이터베이스로 복구했습니다.",
     dbReset: "DB 초기화",
     dbResetConfirm: "로컬 데이터베이스를 초기화할까요? 로컬 데이터가 삭제될 수 있습니다.",
+    dbResetting: "데이터베이스를 초기화하는 중입니다...",
+    dbResetBlocked: "다른 탭에서 초기화를 막고 있습니다. 다른 탭을 닫고 다시 시도해 주세요.",
+    dbResetFailed: "데이터베이스 초기화에 실패했습니다. 브라우저 저장소를 확인해 주세요.",
+    dbProfileUnavailable: "데이터베이스를 사용할 수 없어 프로필을 불러올 수 없습니다.",
     charCount: "자",
 
     // Profile

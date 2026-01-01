@@ -64,41 +64,8 @@ export const Journal = () => {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const analysisRunId = useRef(0);
     const [dbNotice, setDbNotice] = useState<string | null>(null);
-
-    const loadHistory = useCallback(async () => {
-        try {
-            const db = await getDB();
-            const allEntries = await db.getAllFromIndex('journal', 'by-date');
-            setHistory(allEntries.reverse());
-            setDbNotice(null);
-            setAnalysisError(null);
-        } catch (error) {
-            setHistory(loadFallbackEntries());
-            setDbNotice(t('dbFallbackMode'));
-            if (error instanceof Error) {
-                if (error.message === DB_ERRORS.blocked) {
-                    setAnalysisError(t('dbBlocked'));
-                } else if (error.message === DB_ERRORS.timeout) {
-                    setAnalysisError(t('dbTimeout'));
-                } else if (error.name === 'NotFoundError' || error.message.includes('object stores')) {
-                    setAnalysisError(t('dbMissingStore'));
-                } else {
-                    setAnalysisError(t('saveFailed'));
-                }
-            } else {
-                setAnalysisError(t('saveFailed'));
-            }
-        }
-    }, [t]);
-
-    useEffect(() => {
-        loadHistory();
-        try {
-            setAiConfigured(checkAIStatus().configured);
-        } catch {
-            setAiConfigured(false);
-        }
-    }, [loadHistory]);
+    const [isResettingDb, setIsResettingDb] = useState(false);
+    const migrationInProgress = useRef(false);
 
     const resolveDbErrorMessage = (error: unknown): string => {
         if (error instanceof Error) {
@@ -121,16 +88,96 @@ export const Journal = () => {
         );
     };
 
+    const maybeRecoverFallbackEntries = useCallback(async (db: IDBDatabase) => {
+        if (migrationInProgress.current) return false;
+        const fallbackEntries = loadFallbackEntries();
+        if (!fallbackEntries.length) return false;
+        migrationInProgress.current = true;
+        setDbNotice(t('dbRecovering'));
+        try {
+            const tx = db.transaction('journal', 'readwrite');
+            const store = tx.objectStore('journal');
+            for (const entry of fallbackEntries) {
+                await store.put(entry);
+            }
+            await tx.done;
+            localStorage.removeItem(FALLBACK_JOURNAL_KEY);
+            setDbNotice(t('dbRecovered'));
+            setTimeout(() => setDbNotice(null), 4000);
+            return true;
+        } catch (error) {
+            console.warn('Failed to recover fallback entries', error);
+            setDbNotice(t('dbFallbackMode'));
+            return false;
+        } finally {
+            migrationInProgress.current = false;
+        }
+    }, [t]);
+
+    const loadHistory = useCallback(async () => {
+        try {
+            const db = await getDB();
+            const allEntries = await db.getAllFromIndex('journal', 'by-date');
+            setHistory(allEntries.reverse());
+            setDbNotice(null);
+            setAnalysisError(null);
+            const recovered = await maybeRecoverFallbackEntries(db);
+            if (recovered) {
+                const refreshed = await db.getAllFromIndex('journal', 'by-date');
+                setHistory(refreshed.reverse());
+            }
+        } catch (error) {
+            setHistory(loadFallbackEntries());
+            setDbNotice(t('dbFallbackMode'));
+            if (error instanceof Error) {
+                if (error.message === DB_ERRORS.blocked) {
+                    setAnalysisError(t('dbBlocked'));
+                } else if (error.message === DB_ERRORS.timeout) {
+                    setAnalysisError(t('dbTimeout'));
+                } else if (error.name === 'NotFoundError' || error.message.includes('object stores')) {
+                    setAnalysisError(t('dbMissingStore'));
+                } else {
+                    setAnalysisError(t('saveFailed'));
+                }
+            } else {
+                setAnalysisError(t('saveFailed'));
+            }
+        }
+    }, [maybeRecoverFallbackEntries, t]);
+
+    useEffect(() => {
+        loadHistory();
+        try {
+            setAiConfigured(checkAIStatus().configured);
+        } catch {
+            setAiConfigured(false);
+        }
+    }, [loadHistory]);
+
     const handleResetDb = () => {
         const confirmed = window.confirm(t('dbResetConfirm'));
         if (!confirmed) return;
+        setIsResettingDb(true);
+        setDbNotice(t('dbResetting'));
+        setAnalysisError(null);
         try {
-            indexedDB.deleteDatabase(DB_NAME);
+            const req = indexedDB.deleteDatabase(DB_NAME);
+            req.onsuccess = () => {
+                setIsResettingDb(false);
+                window.location.reload();
+            };
+            req.onerror = () => {
+                setIsResettingDb(false);
+                setAnalysisError(t('dbResetFailed'));
+            };
+            req.onblocked = () => {
+                setIsResettingDb(false);
+                setAnalysisError(t('dbResetBlocked'));
+            };
         } catch {
-            // Ignore and reload anyway.
+            setIsResettingDb(false);
+            setAnalysisError(t('dbResetFailed'));
         }
-        localStorage.removeItem(FALLBACK_JOURNAL_KEY);
-        window.location.reload();
     };
 
     const handleSave = async () => {
@@ -381,6 +428,7 @@ export const Journal = () => {
                                             variant="outline"
                                             size="sm"
                                             onClick={handleResetDb}
+                                            disabled={isResettingDb}
                                             className="h-7 px-3 text-[10px] font-black tracking-widest uppercase"
                                         >
                                             {t('dbReset')}

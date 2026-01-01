@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { 
   getDB, 
   exportAllData, 
@@ -36,24 +36,27 @@ export const Profile = () => {
     const [skills, setSkills] = useState<Skill[]>([]);
     const [insights, setInsights] = useState<Insight[]>([]);
     const [isExporting, setIsExporting] = useState(false);
+    const [dbNotice, setDbNotice] = useState<string | null>(null);
 
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         try {
             const db = await getDB();
             const allSkills = await db.getAll('skills');
             const allInsights = await db.getAll('insights');
             setSkills(allSkills);
             setInsights(allInsights);
+            setDbNotice(null);
         } catch (error) {
             console.warn('Failed to load profile data', error);
             setSkills([]);
             setInsights([]);
+            setDbNotice(t('dbProfileUnavailable'));
         }
-    };
+    }, [t]);
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [loadData]);
 
     const handleExport = async () => {
         try {
@@ -129,6 +132,13 @@ export const Profile = () => {
                     {t('profileDesc')}
                 </p>
             </header>
+
+            {dbNotice && (
+                <div className="flex items-center gap-3 p-6 bg-amber-500/10 border border-amber-500/20 rounded-[2rem] text-amber-500">
+                    <AlertTriangle className="w-6 h-6" />
+                    <p className="font-bold tracking-tight">{dbNotice}</p>
+                </div>
+            )}
             
             {(uniqueArchetypes.length > 0 || uniquePatterns.length > 0) && (
                 <Card className="bg-secondary/20 border-border backdrop-blur-2xl rounded-[3rem] overflow-hidden shadow-2xl">
