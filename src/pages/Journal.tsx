@@ -157,15 +157,21 @@ export const Journal = () => {
             };
             req.onerror = () => {
                 setIsResettingDb(false);
+                setDbNotice(t('dbFallbackMode'));
                 setAnalysisError(t('dbResetFailed'));
+                setTimeout(() => setAnalysisError(null), 6000);
             };
             req.onblocked = () => {
                 setIsResettingDb(false);
+                setDbNotice(t('dbFallbackMode'));
                 setAnalysisError(t('dbResetBlocked'));
+                setTimeout(() => setAnalysisError(null), 6000);
             };
         } catch {
             setIsResettingDb(false);
+            setDbNotice(t('dbFallbackMode'));
             setAnalysisError(t('dbResetFailed'));
+            setTimeout(() => setAnalysisError(null), 6000);
         }
     };
 
