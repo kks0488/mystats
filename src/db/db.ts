@@ -48,7 +48,7 @@ export const InsightSchema = z.object({
 
 export type Insight = z.infer<typeof InsightSchema>;
 
-interface MyStatsDB extends DBSchema {
+export interface MyStatsDB extends DBSchema {
   journal: {
     key: string;
     value: JournalEntry;

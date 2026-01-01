@@ -11,7 +11,8 @@ import {
   BookOpen,
   Zap
 } from 'lucide-react';
-import { getDB, upsertSkill, DB_ERRORS, DB_OP_TIMEOUT_MS, DB_NAME, type Skill, type Insight, type JournalEntry } from '../db/db';
+import type { IDBPDatabase } from 'idb';
+import { getDB, upsertSkill, DB_ERRORS, DB_OP_TIMEOUT_MS, DB_NAME, type MyStatsDB, type Skill, type Insight, type JournalEntry } from '../db/db';
 import { analyzeEntryWithAI, checkAIStatus } from '../lib/ai-provider';
 import { generateId } from '../lib/utils';
 import { Button } from '@/components/ui/button';
@@ -88,7 +89,7 @@ export const Journal = () => {
         );
     };
 
-    const maybeRecoverFallbackEntries = useCallback(async (db: IDBDatabase) => {
+    const maybeRecoverFallbackEntries = useCallback(async (db: IDBPDatabase<MyStatsDB>) => {
         if (migrationInProgress.current) return false;
         const fallbackEntries = loadFallbackEntries();
         if (!fallbackEntries.length) return false;
