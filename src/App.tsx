@@ -1,12 +1,13 @@
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { Shell } from './components/layout/Shell';
-import { Home } from './pages/Home';
-import { Journal } from './pages/Journal';
-import { Profile } from './pages/Profile';
-import { Strategy } from './pages/Strategy';
 import { LanguageProvider } from './lib/LanguageProvider';
-import { useEffect } from 'react';
+import { useEffect, Suspense, lazy } from 'react';
 import { migrateData } from './db/db';
+
+const Home = lazy(() => import('./pages/Home').then(module => ({ default: module.Home })));
+const Journal = lazy(() => import('./pages/Journal').then(module => ({ default: module.Journal })));
+const Profile = lazy(() => import('./pages/Profile').then(module => ({ default: module.Profile })));
+const Strategy = lazy(() => import('./pages/Strategy').then(module => ({ default: module.Strategy })));
 
 function App() {
   useEffect(() => {
@@ -26,15 +27,21 @@ function App() {
     init();
   }, []);
 
+  const pageFallback = (
+    <div className="flex items-center justify-center min-h-[60vh] text-sm font-semibold text-muted-foreground">
+      Loading...
+    </div>
+  );
+
   return (
     <LanguageProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Shell><Outlet /></Shell>}>
-            <Route index element={<Home />} />
-            <Route path="journal" element={<Journal />} />
-            <Route path="profile" element={<Profile />} />
-            <Route path="strategy" element={<Strategy />} />
+            <Route index element={<Suspense fallback={pageFallback}><Home /></Suspense>} />
+            <Route path="journal" element={<Suspense fallback={pageFallback}><Journal /></Suspense>} />
+            <Route path="profile" element={<Suspense fallback={pageFallback}><Profile /></Suspense>} />
+            <Route path="strategy" element={<Suspense fallback={pageFallback}><Strategy /></Suspense>} />
           </Route>
         </Routes>
       </BrowserRouter>

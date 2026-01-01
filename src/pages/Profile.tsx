@@ -46,6 +46,7 @@ import {
   clearFallbackData,
   clearFallbackSkills,
   clearFallbackInsights,
+  getFallbackStorageMode,
 } from '../db/fallback';
 
 interface SkillSummary extends Skill {
@@ -154,6 +155,7 @@ export const Profile = () => {
     const [showAllArchetypes, setShowAllArchetypes] = useState(false);
     const [showAllPatterns, setShowAllPatterns] = useState(false);
     const [showAllQuestions, setShowAllQuestions] = useState(false);
+    const [storageMode, setStorageMode] = useState<'db' | 'fallback' | 'memory'>('db');
     const migrationInProgress = useRef(false);
 
     const maybeRecoverFallbackData = useCallback(async (db: Awaited<ReturnType<typeof getDB>>) => {
@@ -203,6 +205,7 @@ export const Profile = () => {
             setSkills(allSkills);
             setInsights(allInsights);
             setDbNotice(null);
+            setStorageMode('db');
             if (recovered) {
                 const refreshedSkills = await db.getAll('skills');
                 const refreshedInsights = await db.getAll('insights');
@@ -215,6 +218,7 @@ export const Profile = () => {
             const fallbackInsights = loadFallbackInsights();
             setSkills(fallbackSkills);
             setInsights(fallbackInsights);
+            setStorageMode(getFallbackStorageMode() === 'memory' ? 'memory' : 'fallback');
             setDbNotice(
                 fallbackSkills.length || fallbackInsights.length
                     ? t('dbProfileFallback')
@@ -537,6 +541,13 @@ export const Profile = () => {
         };
     }, [skills]);
 
+    const storageLabel =
+        storageMode === 'db'
+            ? t('storageModeDb')
+            : storageMode === 'memory'
+                ? t('storageModeMemory')
+                : t('storageModeFallback');
+
     const uniqueArchetypes = Array.from(new Set(safeInsights.flatMap(i => i.archetypes || []))).map(a => a?.trim()).filter(Boolean);
     const uniquePatterns = Array.from(new Set(safeInsights.flatMap(i => i.hiddenPatterns || []))).map(p => p?.trim()).filter(Boolean);
     const uniqueQuestions = Array.from(new Set(safeInsights.flatMap(i => i.criticalQuestions || []))).map(q => q?.trim()).filter(Boolean);
@@ -768,6 +779,9 @@ export const Profile = () => {
                                 </CardDescription>
                             </div>
                         </div>
+                        <div className="mt-4 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                            {t('storageModeLabel')}: {storageLabel}
+                        </div>
                     </CardHeader>
                     <CardContent className="p-10 pt-0">
                         <div className="p-8 bg-background/40 rounded-[2rem] border border-border space-y-6 mb-8">
@@ -812,6 +826,10 @@ export const Profile = () => {
                                             ? '모든 데이터를 JSON 백업 파일로 다운로드합니다. 주기적인 백업을 권장합니다.' 
                                             : 'Download a JSON backup of all your data. Regular backups are recommended.'}
                                     </p>
+                                    <ul className="text-xs text-muted-foreground space-y-1">
+                                        <li>{t('exportIncludes')}</li>
+                                        <li>{t('exportFallbackNote')}</li>
+                                    </ul>
                                 </div>
                                 <Button 
                                     onClick={handleExport}
@@ -835,6 +853,10 @@ export const Profile = () => {
                                             ? '백업 JSON 파일을 선택하여 데이터를 복원합니다. 기존 데이터는 업데이트됩니다.' 
                                             : 'Choose a backup JSON file to restore your data. Existing records will be updated.'}
                                     </p>
+                                    <ul className="text-xs text-muted-foreground space-y-1">
+                                        <li>{t('importMergeNote')}</li>
+                                        <li>{t('importFallbackNote')}</li>
+                                    </ul>
                                 </div>
                                 <div className="relative">
                                     <input

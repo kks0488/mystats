@@ -9,6 +9,14 @@
  */
 
 import { getDB, type JournalEntry, type Skill, type Insight } from './db';
+import {
+  loadFallbackJournalEntries,
+  saveFallbackJournalEntry,
+  upsertFallbackSkill,
+  addFallbackInsight,
+} from './fallback';
+
+export type DemoSeedResult = 'db' | 'fallback' | 'skipped' | 'failed';
 
 const DEMO_JOURNAL_ENTRIES: Omit<JournalEntry, 'id'>[] = [
   {
@@ -85,7 +93,51 @@ const DEMO_INSIGHTS: Omit<Insight, 'id' | 'entryId'>[] = [
   }
 ];
 
-export const seedDemoData = async (): Promise<boolean> => {
+const buildDemoRecords = () => {
+  const entries = DEMO_JOURNAL_ENTRIES.map((entry) => ({
+    ...entry,
+    id: crypto.randomUUID(),
+  }));
+  const skills = DEMO_SKILLS.map((skill) => ({
+    ...skill,
+    id: crypto.randomUUID(),
+  }));
+  const entryIdForInsights = entries[0]?.id ?? crypto.randomUUID();
+  const insights = DEMO_INSIGHTS.map((insight) => ({
+    ...insight,
+    id: crypto.randomUUID(),
+    entryId: entryIdForInsights,
+  }));
+  return { entries, skills, insights };
+};
+
+export const seedDemoDataToFallback = async (): Promise<DemoSeedResult> => {
+  try {
+    const existingFallback = loadFallbackJournalEntries();
+    if (existingFallback.length > 0) {
+      console.log('[Demo] Fallback data already exists, skipping seed');
+      return 'skipped';
+    }
+    const { entries, skills, insights } = buildDemoRecords();
+    for (const entry of entries) {
+      saveFallbackJournalEntry(entry);
+    }
+    const entryIdForSkills = entries[0]?.id;
+    for (const skill of skills) {
+      upsertFallbackSkill({ name: skill.name, category: skill.category }, entryIdForSkills);
+    }
+    for (const insight of insights) {
+      addFallbackInsight(insight);
+    }
+    console.log('[Demo] ✅ Demo data seeded to fallback successfully!');
+    return 'fallback';
+  } catch (error) {
+    console.error('[Demo] Failed to seed fallback demo data:', error);
+    return 'failed';
+  }
+};
+
+export const seedDemoData = async (): Promise<DemoSeedResult> => {
   try {
     const db = await getDB();
     
@@ -93,35 +145,25 @@ export const seedDemoData = async (): Promise<boolean> => {
     const existingJournal = await db.count('journal');
     if (existingJournal > 0) {
       console.log('[Demo] Data already exists, skipping seed');
-      return false;
+      return 'skipped';
     }
 
     console.log('[Demo] Seeding demo data...');
+    const { entries, skills, insights } = buildDemoRecords();
 
     // Seed journal entries
-    for (const entry of DEMO_JOURNAL_ENTRIES) {
-      await db.put('journal', {
-        ...entry,
-        id: crypto.randomUUID()
-      });
+    for (const entry of entries) {
+      await db.put('journal', entry);
     }
 
     // Seed skills
-    for (const skill of DEMO_SKILLS) {
-      await db.put('skills', {
-        ...skill,
-        id: crypto.randomUUID()
-      });
+    for (const skill of skills) {
+      await db.put('skills', skill);
     }
 
     // Seed insights
-    const firstEntryId = crypto.randomUUID();
-    for (const insight of DEMO_INSIGHTS) {
-      await db.put('insights', {
-        ...insight,
-        id: crypto.randomUUID(),
-        entryId: firstEntryId
-      });
+    for (const insight of insights) {
+      await db.put('insights', insight);
     }
 
     console.log('[Demo] ✅ Demo data seeded successfully!');
@@ -129,10 +171,10 @@ export const seedDemoData = async (): Promise<boolean> => {
     console.log('[Demo] - 12 skills/traits');
     console.log('[Demo] - 1 deep insight with archetypes');
     
-    return true;
+    return 'db';
   } catch (error) {
     console.error('[Demo] Failed to seed demo data:', error);
-    return false;
+    return await seedDemoDataToFallback();
   }
 };
 
