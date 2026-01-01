@@ -300,17 +300,18 @@ export const Home = () => {
                     </p>
                     <div className="flex flex-wrap gap-2 justify-center mb-6">
                         {(Object.keys(AI_PROVIDERS) as AIProvider[]).map((p) => (
-                            <span
+                            <button
                                 key={p}
+                                onClick={() => handleProviderChange(p)}
                                 className={cn(
-                                    "px-3 py-1 rounded-full text-xs font-bold",
+                                    "px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition-all hover:scale-105 active:scale-95",
                                     p === provider 
                                         ? "bg-primary text-primary-foreground" 
-                                        : "bg-secondary text-secondary-foreground"
+                                        : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                                 )}
                             >
                                 {AI_PROVIDERS[p].name.split(' ')[0]}
-                            </span>
+                            </button>
                         ))}
                     </div>
                     <a 
