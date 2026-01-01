@@ -72,7 +72,7 @@ export interface MyStatsDB extends DBSchema {
 }
 
 export const DB_NAME = 'mystats-db';
-const DB_VERSION = 7;
+const DB_VERSION = 8;
 const DB_OPEN_TIMEOUT_MS = 8000;
 export const DB_OP_TIMEOUT_MS = 8000;
 
@@ -112,6 +112,11 @@ const requestPersistence = async () => {
   return false;
 };
 
+const REQUIRED_STORES = ['journal', 'skills', 'solutions', 'insights'] as const;
+
+const hasAllStores = (db: IDBPDatabase<MyStatsDB>) =>
+  REQUIRED_STORES.every(name => db.objectStoreNames.contains(name));
+
 export const initDB = async () => {
   await requestPersistence();
   let isBlocked = false;
@@ -136,7 +141,18 @@ export const initDB = async () => {
     }, DB_OPEN_TIMEOUT_MS);
   });
 
-  return Promise.race([openPromise, timeoutPromise]);
+  const db = await Promise.race([openPromise, timeoutPromise]);
+  if (!hasAllStores(db)) {
+    console.warn('[DB] Missing stores detected. Forcing schema upgrade.');
+    const nextVersion = db.version + 1;
+    db.close();
+    return await openDB<MyStatsDB>(DB_NAME, nextVersion, {
+      upgrade(upgradeDb) {
+        ensureStores(upgradeDb);
+      },
+    });
+  }
+  return db;
 };
 
 /**
