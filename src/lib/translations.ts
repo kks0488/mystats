@@ -57,6 +57,9 @@ export const translations = {
     rebuildNoEntries: "No journal entries to analyze yet.",
     rebuildProgress: "Processing",
     charCount: "characters",
+    intelligenceMarkers: "Intelligence Markers",
+    showAll: "Show all",
+    showLess: "Show less",
 
     // Profile
     profileTitle: "My Profile",
@@ -147,6 +150,9 @@ export const translations = {
     rebuildNoEntries: "분석할 저널이 없습니다.",
     rebuildProgress: "처리 중",
     charCount: "자",
+    intelligenceMarkers: "인텔리전스 마커",
+    showAll: "모두 보기",
+    showLess: "접기",
 
     // Profile
     profileTitle: "나의 프로필",

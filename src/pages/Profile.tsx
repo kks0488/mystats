@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { 
   getDB, 
   exportAllData, 
@@ -43,6 +43,60 @@ import {
   clearFallbackSkills,
   clearFallbackInsights,
 } from '../db/fallback';
+
+interface SkillSummary extends Skill {
+    count: number;
+}
+
+const normalizeSkillName = (value: string) =>
+    value
+        .trim()
+        .replace(/\s+/g, ' ')
+        .replace(/^[\"'`]+|[\"'`]+$/g, '')
+        .replace(/[.!?;:]+$/g, '')
+        .toLowerCase();
+
+const aggregateSkills = (items: Skill[]): SkillSummary[] => {
+    const map = new Map<string, { skill: Skill; sourceIds: Set<string> }>();
+    for (const skill of items) {
+        const cleanedName = skill.name?.trim();
+        if (!cleanedName) continue;
+        const key = normalizeSkillName(cleanedName);
+        if (!key) continue;
+        const sourceIds = new Set(skill.sourceEntryIds ?? []);
+        const existing = map.get(key);
+        if (!existing) {
+            map.set(key, { skill: { ...skill, name: cleanedName }, sourceIds });
+            continue;
+        }
+        for (const id of sourceIds) {
+            existing.sourceIds.add(id);
+        }
+        const existingTime = existing.skill.lastModified ?? existing.skill.createdAt ?? 0;
+        const nextTime = skill.lastModified ?? skill.createdAt ?? 0;
+        if (nextTime >= existingTime) {
+            existing.skill = { ...existing.skill, name: cleanedName, lastModified: skill.lastModified ?? existing.skill.lastModified };
+        }
+    }
+
+    return Array.from(map.entries())
+        .map(([key, value]) => {
+            const ids = Array.from(value.sourceIds);
+            return {
+                ...value.skill,
+                id: key,
+                sourceEntryIds: ids,
+                count: ids.length || 1,
+            };
+        })
+        .sort((a, b) => {
+            const countDiff = b.count - a.count;
+            if (countDiff !== 0) return countDiff;
+            const timeDiff = (b.lastModified ?? b.createdAt ?? 0) - (a.lastModified ?? a.createdAt ?? 0);
+            if (timeDiff !== 0) return timeDiff;
+            return a.name.localeCompare(b.name);
+        });
+};
 
 export const Profile = () => {
     const { t, language } = useLanguage();
@@ -259,16 +313,18 @@ export const Profile = () => {
         reader.readAsText(file);
     };
 
-    const safeSkills = Array.isArray(skills) ? skills : [];
     const safeInsights = Array.isArray(insights) ? insights : [];
 
-    const grouped = {
-        hard: safeSkills.filter(s => s.category === 'hard'),
-        soft: safeSkills.filter(s => s.category === 'soft'),
-        experience: safeSkills.filter(s => s.category === 'experience'),
-        interest: safeSkills.filter(s => s.category === 'interest'),
-        trait: safeSkills.filter(s => ['trait', 'strength', 'weakness'].includes(s.category)),
-    };
+    const grouped = useMemo(() => {
+        const list = Array.isArray(skills) ? skills : [];
+        return {
+            hard: aggregateSkills(list.filter(s => s.category === 'hard')),
+            soft: aggregateSkills(list.filter(s => s.category === 'soft')),
+            experience: aggregateSkills(list.filter(s => s.category === 'experience')),
+            interest: aggregateSkills(list.filter(s => s.category === 'interest')),
+            trait: aggregateSkills(list.filter(s => ['trait', 'strength', 'weakness'].includes(s.category))),
+        };
+    }, [skills]);
 
     const uniqueArchetypes = Array.from(new Set(safeInsights.flatMap(i => i.archetypes || []))).map(a => a?.trim()).filter(Boolean);
     const uniquePatterns = Array.from(new Set(safeInsights.flatMap(i => i.hiddenPatterns || []))).map(p => p?.trim()).filter(Boolean);
@@ -590,37 +646,63 @@ export const Profile = () => {
 
 interface SkillSectionProps {
     title: string;
-    items: Skill[];
+    items: SkillSummary[];
     icon: LucideIcon;
     iconColor: string;
     emptyMsg: string;
 }
 
-const SkillSection = ({ title, items, icon: Icon, iconColor, emptyMsg }: SkillSectionProps) => (
-    <Card className="h-full bg-secondary/20 border-border hover:bg-secondary/30 transition-all duration-300 rounded-[2.5rem] overflow-hidden group">
-        <CardHeader className="p-8">
-            <div className="flex items-center gap-4">
-                <div className={cn("p-3 rounded-2xl transition-transform duration-500 group-hover:scale-110", iconColor)}>
-                    <Icon size={24} />
+const SkillSection = ({ title, items, icon: Icon, iconColor, emptyMsg }: SkillSectionProps) => {
+    const { t } = useLanguage();
+    const [expanded, setExpanded] = useState(false);
+    const limit = 12;
+    const visibleItems = expanded ? items : items.slice(0, limit);
+    const hiddenCount = Math.max(items.length - visibleItems.length, 0);
+    const totalMarkers = items.reduce((sum, item) => sum + (item.count || 1), 0);
+
+    return (
+        <Card className="h-full bg-secondary/20 border-border hover:bg-secondary/30 transition-all duration-300 rounded-[2.5rem] overflow-hidden group">
+            <CardHeader className="p-8">
+                <div className="flex items-center gap-4">
+                    <div className={cn("p-3 rounded-2xl transition-transform duration-500 group-hover:scale-110", iconColor)}>
+                        <Icon size={24} />
+                    </div>
+                    <CardTitle className="text-xl font-bold tracking-tight">{title}</CardTitle>
                 </div>
-                <CardTitle className="text-xl font-bold tracking-tight">{title}</CardTitle>
-            </div>
-        </CardHeader>
-        <CardContent className="px-8 pb-10">
-            <div className="flex flex-wrap gap-2.5">
-                {items.length === 0 && <p className="text-muted-foreground italic text-sm py-4">{emptyMsg}</p>}
-                {items.map((s) => (
-                    <Badge key={s.id} variant="outline" className="px-4 py-2 text-xs font-bold rounded-xl border-border bg-background/50 text-foreground hover:bg-background hover:border-primary/30 transition-all">
-                        {s.name}
-                    </Badge>
-                ))}
-            </div>
-            {items.length > 0 && (
-              <div className="mt-10 pt-6 border-t border-border flex items-center justify-between text-[10px] font-black text-muted-foreground uppercase tracking-widest">
-                  {items.length} Intelligence Markers
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-              </div>
-            )}
-        </CardContent>
-    </Card>
-);
+            </CardHeader>
+            <CardContent className="px-8 pb-10">
+                <div className="flex flex-wrap gap-2.5">
+                    {items.length === 0 && <p className="text-muted-foreground italic text-sm py-4">{emptyMsg}</p>}
+                    {visibleItems.map((s) => (
+                        <Badge
+                            key={s.id}
+                            variant="outline"
+                            className="px-4 py-2 text-xs font-bold rounded-xl border-border bg-background/50 text-foreground hover:bg-background hover:border-primary/30 transition-all flex items-center gap-2"
+                        >
+                            <span>{s.name}</span>
+                            {s.count > 1 && (
+                                <span className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">x{s.count}</span>
+                            )}
+                        </Badge>
+                    ))}
+                </div>
+                {items.length > 0 && (
+                  <div className="mt-10 pt-6 border-t border-border flex items-center justify-between text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                      <span>{totalMarkers} {t('intelligenceMarkers')}</span>
+                      {hiddenCount > 0 ? (
+                          <button
+                              type="button"
+                              onClick={() => setExpanded(prev => !prev)}
+                              className="text-primary hover:underline underline-offset-4"
+                          >
+                              {expanded ? t('showLess') : `${t('showAll')} (${hiddenCount})`}
+                          </button>
+                      ) : (
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                      )}
+                  </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+};
