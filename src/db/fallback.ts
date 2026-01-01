@@ -84,9 +84,25 @@ const safeParseList = (key: string): unknown[] => {
 const toJournalEntry = (item: unknown): JournalEntry | null => {
   if (!item || typeof item !== 'object') return null;
   const record = item as Record<string, unknown>;
-  const content = typeof record.content === 'string' ? record.content : '';
+  const content =
+    typeof record.content === 'string'
+      ? record.content
+      : typeof record.text === 'string'
+        ? record.text
+        : typeof record.entry === 'string'
+          ? record.entry
+          : '';
   if (!content) return null;
-  const timestamp = typeof record.timestamp === 'number' ? record.timestamp : Date.now();
+  const timestampRaw = record.timestamp ?? record.createdAt;
+  let timestamp =
+    typeof timestampRaw === 'number'
+      ? timestampRaw
+      : typeof timestampRaw === 'string'
+        ? new Date(timestampRaw).getTime()
+        : Date.now();
+  if (!Number.isFinite(timestamp)) {
+    timestamp = Date.now();
+  }
   const entryType: JournalEntry['type'] = record.type === 'project' ? 'project' : 'journal';
   return {
     id: typeof record.id === 'string' ? record.id : crypto.randomUUID(),

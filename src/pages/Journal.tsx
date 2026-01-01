@@ -127,6 +127,14 @@ export const Journal = () => {
         }
     }, [loadHistory]);
 
+    useEffect(() => {
+        const handleUpdate = () => {
+            loadHistory();
+        };
+        window.addEventListener('mystats-data-updated', handleUpdate);
+        return () => window.removeEventListener('mystats-data-updated', handleUpdate);
+    }, [loadHistory]);
+
     const dismissDbNotice = () => {
         setHideDbNotice(true);
         sessionStorage.setItem('MYSTATS_HIDE_DB_NOTICE', '1');

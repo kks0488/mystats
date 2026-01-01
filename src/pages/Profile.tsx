@@ -435,19 +435,31 @@ export const Profile = () => {
                 const raw = JSON.parse(event.target?.result as string);
                 const data = raw && typeof raw === 'object' ? raw : {};
                 const baseData = {
-                    journal: Array.isArray(data.journal) ? data.journal : [],
+                    journal: Array.isArray(data.journal)
+                        ? data.journal
+                        : Array.isArray(data.entries)
+                            ? data.entries
+                            : [],
                     skills: Array.isArray(data.skills) ? data.skills : [],
                     solutions: Array.isArray(data.solutions) ? data.solutions : [],
                     insights: Array.isArray(data.insights) ? data.insights : [],
                 };
                 const fallbackData = data.fallback && typeof data.fallback === 'object'
                     ? {
-                        journal: Array.isArray(data.fallback.journal) ? data.fallback.journal : [],
+                        journal: Array.isArray(data.fallback.journal)
+                            ? data.fallback.journal
+                            : Array.isArray(data.fallback.entries)
+                                ? data.fallback.entries
+                                : [],
                         skills: Array.isArray(data.fallback.skills) ? data.fallback.skills : [],
                         insights: Array.isArray(data.fallback.insights) ? data.fallback.insights : [],
                     }
                     : { journal: [], skills: [], insights: [] };
                 const hasFallback = fallbackData.journal.length || fallbackData.skills.length || fallbackData.insights.length;
+
+                const rawJournal = [...baseData.journal, ...fallbackData.journal] as JournalEntry[];
+                const rawSkills = [...baseData.skills, ...fallbackData.skills] as Skill[];
+                const rawInsights = [...baseData.insights, ...fallbackData.insights] as Insight[];
 
                 let mergedJournal = mergeById<JournalEntry>([...baseData.journal, ...fallbackData.journal] as JournalEntry[]);
                 let mergedSkills = mergeSkillsByName([...baseData.skills, ...fallbackData.skills] as Skill[]);
@@ -472,13 +484,18 @@ export const Profile = () => {
                     });
                     alert(language === 'ko' ? "데이터 복원이 완료되었습니다." : "Data restoration complete.");
                     loadData();
+                    window.dispatchEvent(new Event('mystats-data-updated'));
                 } catch (err) {
                     console.warn('DB import failed. Saving to fallback only.', err);
-                    replaceFallbackJournalEntries(mergedJournal);
-                    replaceFallbackSkills(mergedSkills);
-                    replaceFallbackInsights(mergedInsights);
+                    replaceFallbackJournalEntries(rawJournal);
+                    replaceFallbackSkills(rawSkills);
+                    replaceFallbackInsights(rawInsights);
+                    setSkills(loadFallbackSkills());
+                    setInsights(loadFallbackInsights());
+                    setDbNotice(t('dbProfileFallback'));
                     alert(t('importFallbackOnly'));
                     loadData();
+                    window.dispatchEvent(new Event('mystats-data-updated'));
                 }
             } catch (err) {
                 console.error("Import failed:", err);

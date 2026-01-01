@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Key, 
   BarChart3, 
@@ -59,30 +59,38 @@ export const Home = () => {
     const [showProviderDropdown, setShowProviderDropdown] = useState(false);
     const [showModelDropdown, setShowModelDropdown] = useState(false);
 
+    const loadStats = useCallback(async () => {
+        try {
+            const db = await getDB();
+            const entries = await db.count('journal');
+            const skills = await db.count('skills');
+            const insights = await db.count('insights');
+            setStats({ entries, skills, insights });
+        } catch (error) {
+            console.warn('Failed to load stats', error);
+            setStats({
+                entries: loadFallbackJournalEntries().length,
+                skills: loadFallbackSkills().length,
+                insights: loadFallbackInsights().length,
+            });
+        }
+    }, []);
+
     useEffect(() => {
         const config = getAIConfig();
         setProvider(config.provider);
         setApiKey(config.apiKey);
         setSelectedModel(config.model || AI_PROVIDERS[config.provider].defaultModel);
-
-        const loadStats = async () => {
-            try {
-                const db = await getDB();
-                const entries = await db.count('journal');
-                const skills = await db.count('skills');
-                const insights = await db.count('insights');
-                setStats({ entries, skills, insights });
-            } catch (error) {
-                console.warn('Failed to load stats', error);
-                setStats({
-                    entries: loadFallbackJournalEntries().length,
-                    skills: loadFallbackSkills().length,
-                    insights: loadFallbackInsights().length,
-                });
-            }
-        };
         loadStats();
-    }, []);
+    }, [loadStats]);
+
+    useEffect(() => {
+        const handleUpdate = () => {
+            loadStats();
+        };
+        window.addEventListener('mystats-data-updated', handleUpdate);
+        return () => window.removeEventListener('mystats-data-updated', handleUpdate);
+    }, [loadStats]);
 
     const handleProviderChange = (newProvider: AIProvider) => {
         setProvider(newProvider);
