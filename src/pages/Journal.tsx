@@ -12,7 +12,7 @@ import {
   Zap
 } from 'lucide-react';
 import type { IDBPDatabase } from 'idb';
-import { getDB, upsertSkill, DB_ERRORS, DB_OP_TIMEOUT_MS, DB_NAME, type MyStatsDB, type Skill, type Insight, type JournalEntry } from '../db/db';
+import { getDB, upsertSkill, DB_ERRORS, DB_OP_TIMEOUT_MS, type MyStatsDB, type Skill, type Insight, type JournalEntry } from '../db/db';
 import {
     loadFallbackJournalEntries,
     saveFallbackJournalEntry,
@@ -41,7 +41,9 @@ export const Journal = () => {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const analysisRunId = useRef(0);
     const [dbNotice, setDbNotice] = useState<string | null>(null);
-    const [isResettingDb, setIsResettingDb] = useState(false);
+    const [hideDbNotice, setHideDbNotice] = useState(() => {
+        return sessionStorage.getItem('MYSTATS_HIDE_DB_NOTICE') === '1';
+    });
     const migrationInProgress = useRef(false);
 
     const resolveDbErrorMessage = (error: unknown): string => {
@@ -143,36 +145,9 @@ export const Journal = () => {
         }
     }, [loadHistory]);
 
-    const handleResetDb = () => {
-        const confirmed = window.confirm(t('dbResetConfirm'));
-        if (!confirmed) return;
-        setIsResettingDb(true);
-        setDbNotice(t('dbResetting'));
-        setAnalysisError(null);
-        try {
-            const req = indexedDB.deleteDatabase(DB_NAME);
-            req.onsuccess = () => {
-                setIsResettingDb(false);
-                window.location.reload();
-            };
-            req.onerror = () => {
-                setIsResettingDb(false);
-                setDbNotice(t('dbFallbackMode'));
-                setAnalysisError(t('dbResetFailed'));
-                setTimeout(() => setAnalysisError(null), 6000);
-            };
-            req.onblocked = () => {
-                setIsResettingDb(false);
-                setDbNotice(t('dbFallbackMode'));
-                setAnalysisError(t('dbResetBlocked'));
-                setTimeout(() => setAnalysisError(null), 6000);
-            };
-        } catch {
-            setIsResettingDb(false);
-            setDbNotice(t('dbFallbackMode'));
-            setAnalysisError(t('dbResetFailed'));
-            setTimeout(() => setAnalysisError(null), 6000);
-        }
+    const dismissDbNotice = () => {
+        setHideDbNotice(true);
+        sessionStorage.setItem('MYSTATS_HIDE_DB_NOTICE', '1');
     };
 
     const handleSave = async () => {
@@ -417,7 +392,7 @@ export const Journal = () => {
                             </div>
                         </div>
 
-                        {(!aiConfigured || analysisError || dbNotice) && (
+                        {(!aiConfigured || analysisError || (dbNotice && !hideDbNotice)) && (
                             <div className="px-8 py-4 border-b border-border bg-background/40 space-y-2">
                                 {!aiConfigured && (
                                     <div className="flex items-start gap-2 text-xs font-semibold text-amber-500">
@@ -425,21 +400,19 @@ export const Journal = () => {
                                         <span>{t('noApiKeyWarning')}</span>
                                     </div>
                                 )}
-                                {dbNotice && (
+                                {dbNotice && !hideDbNotice && (
                                     <div className="flex items-center justify-between gap-3 text-xs font-semibold text-amber-500">
                                         <div className="flex items-start gap-2">
                                             <AlertCircle className="w-4 h-4 mt-0.5" />
                                             <span>{dbNotice}</span>
                                         </div>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={handleResetDb}
-                                            disabled={isResettingDb}
-                                            className="h-7 px-3 text-[10px] font-black tracking-widest uppercase"
+                                        <button
+                                            type="button"
+                                            onClick={dismissDbNotice}
+                                            className="text-[10px] font-black uppercase tracking-widest text-amber-500 hover:text-amber-400"
                                         >
-                                            {t('dbReset')}
-                                        </Button>
+                                            {t('dbNoticeHide')}
+                                        </button>
                                     </div>
                                 )}
                                 {analysisError && (

@@ -4,6 +4,7 @@ import {
   exportAllData, 
   importAllData, 
   upsertSkill,
+  DB_NAME,
   type Skill, 
   type Insight,
   type JournalEntry
@@ -52,6 +53,8 @@ export const Profile = () => {
     const [isRebuilding, setIsRebuilding] = useState(false);
     const [rebuildProgress, setRebuildProgress] = useState<{ current: number; total: number } | null>(null);
     const [rebuildMessage, setRebuildMessage] = useState<string | null>(null);
+    const [isResettingDb, setIsResettingDb] = useState(false);
+    const [resetMessage, setResetMessage] = useState<string | null>(null);
 
     const loadData = useCallback(async () => {
         try {
@@ -176,6 +179,34 @@ export const Profile = () => {
             setTimeout(() => setRebuildMessage(null), 6000);
         }
     }, [language, loadData, t]);
+
+    const handleResetDb = useCallback(() => {
+        const confirmed = window.confirm(t('dbResetConfirm'));
+        if (!confirmed) return;
+        setIsResettingDb(true);
+        setResetMessage(t('dbResetting'));
+        try {
+            const req = indexedDB.deleteDatabase(DB_NAME);
+            req.onsuccess = () => {
+                setIsResettingDb(false);
+                window.location.reload();
+            };
+            req.onerror = () => {
+                setIsResettingDb(false);
+                setResetMessage(t('dbResetFailed'));
+                setTimeout(() => setResetMessage(null), 6000);
+            };
+            req.onblocked = () => {
+                setIsResettingDb(false);
+                setResetMessage(t('dbResetBlocked'));
+                setTimeout(() => setResetMessage(null), 6000);
+            };
+        } catch {
+            setIsResettingDb(false);
+            setResetMessage(t('dbResetFailed'));
+            setTimeout(() => setResetMessage(null), 6000);
+        }
+    }, [t]);
 
     useEffect(() => {
         loadData();
@@ -515,6 +546,32 @@ export const Profile = () => {
                                 </div>
                             </div>
                         </div>
+
+                        <div className="mt-6 p-6 bg-background/40 rounded-[2rem] border border-border flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            <div className="space-y-1">
+                                <p className="text-sm font-semibold">
+                                    {language === 'ko' ? '로컬 데이터베이스 초기화' : 'Reset Local Database'}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    {language === 'ko'
+                                        ? 'DB가 꼬였을 때만 사용하세요. 로컬 데이터가 삭제될 수 있습니다.'
+                                        : 'Use only if the DB is stuck. Local data may be removed.'}
+                                </p>
+                            </div>
+                            <Button
+                                variant="outline"
+                                onClick={handleResetDb}
+                                disabled={isResettingDb}
+                                className="h-10 px-4 font-bold tracking-tight"
+                            >
+                                {t('dbReset')}
+                            </Button>
+                        </div>
+                        {resetMessage && (
+                            <p className="mt-3 text-xs font-semibold text-muted-foreground">
+                                {resetMessage}
+                            </p>
+                        )}
 
                         <div className="mt-8 p-6 bg-amber-500/5 border border-amber-500/10 rounded-2xl flex items-start gap-4">
                             <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
