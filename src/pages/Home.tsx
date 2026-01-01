@@ -149,7 +149,7 @@ export const Home = () => {
         setDemoStatus('loading');
         try {
             const { seedDemoData } = await import('../db/demoData');
-            const result = await seedDemoData();
+            const result = await seedDemoData(language);
             if (result === 'db') {
                 setDemoStatus('seeded');
             } else if (result === 'fallback') {
