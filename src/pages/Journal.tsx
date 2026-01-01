@@ -11,7 +11,7 @@ import {
   BookOpen,
   Zap
 } from 'lucide-react';
-import { getDB, upsertSkill, DB_ERRORS, type Skill, type Insight, type JournalEntry } from '../db/db';
+import { getDB, upsertSkill, DB_ERRORS, DB_OP_TIMEOUT_MS, type Skill, type Insight, type JournalEntry } from '../db/db';
 import { analyzeEntryWithAI, checkAIStatus } from '../lib/ai-provider';
 import { generateId } from '../lib/utils';
 import { Button } from '@/components/ui/button';
@@ -56,14 +56,19 @@ export const Journal = () => {
             const db = await getDB();
             const entryId = generateId();
             const timestamp = Date.now();
-
-            await db.put('journal', {
+            const savePromise = db.put('journal', {
                 id: entryId,
                 content,
                 timestamp,
                 type: 'journal',
                 lastModified: timestamp
             });
+            await Promise.race([
+                savePromise,
+                new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error(DB_ERRORS.timeout)), DB_OP_TIMEOUT_MS);
+                }),
+            ]);
 
             setStatus('saved');
             setContent('');
