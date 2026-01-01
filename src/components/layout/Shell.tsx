@@ -94,10 +94,10 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
         </nav>
 
         <div className="pt-6 border-t border-border mt-auto">
-          <button className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-secondary hover:text-white transition-all w-full group">
+          <Link to="/" className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-secondary hover:text-white transition-all w-full group">
             <Settings size={20} className="group-hover:rotate-90 transition-transform duration-500" />
             <span className="font-semibold tracking-tight">System Preferences</span>
-          </button>
+          </Link>
         </div>
       </aside>
 
