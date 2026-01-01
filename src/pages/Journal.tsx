@@ -12,7 +12,7 @@ import {
   Zap
 } from 'lucide-react';
 import { getDB, upsertSkill, type Skill, type Insight, type JournalEntry } from '../db/db';
-import { analyzeEntryWithAI } from '../lib/ai-provider';
+import { analyzeEntryWithAI, checkAIStatus } from '../lib/ai-provider';
 import { generateId } from '../lib/utils';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '../hooks/useLanguage';
@@ -54,8 +54,8 @@ export const Journal = () => {
                 lastModified: timestamp
             });
 
-            const apiKey = localStorage.getItem('GEMINI_API_KEY');
-            if (apiKey) {
+            const aiStatus = checkAIStatus();
+            if (aiStatus.configured) {
                 setStatus('processing');
                 try {
                     const result = await analyzeEntryWithAI(content, language);
