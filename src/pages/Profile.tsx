@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { 
   getDB, 
   exportAllData, 
@@ -43,6 +43,7 @@ import {
   replaceFallbackJournalEntries,
   replaceFallbackSkills,
   replaceFallbackInsights,
+  clearFallbackData,
   clearFallbackSkills,
   clearFallbackInsights,
 } from '../db/fallback';
@@ -153,15 +154,61 @@ export const Profile = () => {
     const [showAllArchetypes, setShowAllArchetypes] = useState(false);
     const [showAllPatterns, setShowAllPatterns] = useState(false);
     const [showAllQuestions, setShowAllQuestions] = useState(false);
+    const migrationInProgress = useRef(false);
+
+    const maybeRecoverFallbackData = useCallback(async (db: Awaited<ReturnType<typeof getDB>>) => {
+        if (migrationInProgress.current) return false;
+        const fallbackEntries = loadFallbackJournalEntries();
+        const fallbackSkills = loadFallbackSkills();
+        const fallbackInsights = loadFallbackInsights();
+        if (!fallbackEntries.length && !fallbackSkills.length && !fallbackInsights.length) return false;
+        migrationInProgress.current = true;
+        setDbNotice(t('dbRecovering'));
+        try {
+            const tx = db.transaction(['journal', 'skills', 'insights'], 'readwrite');
+            const journalStore = tx.objectStore('journal');
+            const skillStore = tx.objectStore('skills');
+            const insightStore = tx.objectStore('insights');
+
+            for (const entry of fallbackEntries) {
+                await journalStore.put(entry);
+            }
+            for (const skill of fallbackSkills) {
+                await skillStore.put(skill);
+            }
+            for (const insight of fallbackInsights) {
+                await insightStore.put(insight);
+            }
+
+            await tx.done;
+            clearFallbackData();
+            setDbNotice(t('dbRecovered'));
+            setTimeout(() => setDbNotice(null), 4000);
+            return true;
+        } catch (error) {
+            console.warn('Failed to recover fallback profile data', error);
+            setDbNotice(t('dbProfileFallback'));
+            return false;
+        } finally {
+            migrationInProgress.current = false;
+        }
+    }, [t]);
 
     const loadData = useCallback(async () => {
         try {
             const db = await getDB();
+            const recovered = await maybeRecoverFallbackData(db);
             const allSkills = await db.getAll('skills');
             const allInsights = await db.getAll('insights');
             setSkills(allSkills);
             setInsights(allInsights);
             setDbNotice(null);
+            if (recovered) {
+                const refreshedSkills = await db.getAll('skills');
+                const refreshedInsights = await db.getAll('insights');
+                setSkills(refreshedSkills);
+                setInsights(refreshedInsights);
+            }
         } catch {
             console.warn('Failed to load profile data');
             const fallbackSkills = loadFallbackSkills();
@@ -174,7 +221,7 @@ export const Profile = () => {
                     : t('dbProfileUnavailable')
             );
         }
-    }, [t]);
+    }, [maybeRecoverFallbackData, t]);
 
     const handleRebuildProfile = useCallback(async () => {
         const confirmed = window.confirm(t('rebuildConfirm'));
@@ -722,12 +769,12 @@ export const Profile = () => {
                                 <div className="space-y-2">
                                     <h4 className="font-bold text-lg flex items-center gap-2">
                                         <Download className="w-5 h-5 text-primary" />
-                                        {language === 'ko' ? '데이터 내보내기' : 'Export Data'}
+                                        {language === 'ko' ? '백업 다운로드' : 'Backup Download'}
                                     </h4>
                                     <p className="text-sm text-muted-foreground leading-relaxed">
                                         {language === 'ko' 
-                                            ? '모든 데이터를 JSON 파일로 로컬 기기에 저장합니다. 주기적인 백업을 권장합니다.' 
-                                            : 'Save all your data to your local device as a JSON file. Regular backups are recommended.'}
+                                            ? '모든 데이터를 JSON 백업 파일로 다운로드합니다. 주기적인 백업을 권장합니다.' 
+                                            : 'Download a JSON backup of all your data. Regular backups are recommended.'}
                                     </p>
                                 </div>
                                 <Button 
@@ -737,7 +784,7 @@ export const Profile = () => {
                                 >
                                     {isExporting 
                                         ? (language === 'ko' ? '처리 중...' : 'Processing...') 
-                                        : (language === 'ko' ? 'JSON 백업 파일 다운로드' : 'Download JSON Backup')}
+                                        : (language === 'ko' ? '백업 파일 다운로드' : 'Download Backup')}
                                 </Button>
                             </div>
 
@@ -745,12 +792,12 @@ export const Profile = () => {
                                 <div className="space-y-2">
                                     <h4 className="font-bold text-lg flex items-center gap-2">
                                         <Upload className="w-5 h-5 text-amber-500" />
-                                        {language === 'ko' ? '데이터 불러오기' : 'Import Data'}
+                                        {language === 'ko' ? '백업 복원' : 'Restore from Backup'}
                                     </h4>
                                     <p className="text-sm text-muted-foreground leading-relaxed">
                                         {language === 'ko' 
-                                            ? '백업된 JSON 파일을 선택하여 데이터를 복원합니다. 기존 데이터가 업데이트됩니다.' 
-                                            : 'Select a backup JSON file to restore your data. Existing records will be updated.'}
+                                            ? '백업 JSON 파일을 선택하여 데이터를 복원합니다. 기존 데이터는 업데이트됩니다.' 
+                                            : 'Choose a backup JSON file to restore your data. Existing records will be updated.'}
                                     </p>
                                 </div>
                                 <div className="relative">
@@ -765,7 +812,7 @@ export const Profile = () => {
                                         htmlFor="import-upload"
                                         className="flex items-center justify-center w-full h-12 rounded-xl font-bold tracking-tight border border-primary/20 bg-primary/5 hover:bg-primary/10 cursor-pointer transition-colors"
                                     >
-                                        {language === 'ko' ? '백업 파일 선택 및 복원' : 'Choose File & Restore'}
+                                        {language === 'ko' ? '백업 파일 선택' : 'Choose Backup File'}
                                     </label>
                                 </div>
                             </div>
