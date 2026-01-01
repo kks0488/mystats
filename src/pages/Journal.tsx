@@ -13,45 +13,21 @@ import {
 } from 'lucide-react';
 import type { IDBPDatabase } from 'idb';
 import { getDB, upsertSkill, DB_ERRORS, DB_OP_TIMEOUT_MS, DB_NAME, type MyStatsDB, type Skill, type Insight, type JournalEntry } from '../db/db';
+import {
+    loadFallbackJournalEntries,
+    saveFallbackJournalEntry,
+    loadFallbackSkills,
+    loadFallbackInsights,
+    upsertFallbackSkill,
+    addFallbackInsight,
+    clearFallbackData,
+} from '../db/fallback';
 import { analyzeEntryWithAI, checkAIStatus } from '../lib/ai-provider';
 import { generateId } from '../lib/utils';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '../hooks/useLanguage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-
-const FALLBACK_JOURNAL_KEY = 'MYSTATS_FALLBACK_JOURNAL';
-
-const loadFallbackEntries = (): JournalEntry[] => {
-    try {
-        const raw = localStorage.getItem(FALLBACK_JOURNAL_KEY);
-        if (!raw) return [];
-        const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed)) return [];
-        return parsed
-            .filter((item) => item && typeof item === 'object')
-            .map((item) => {
-                const entryType: JournalEntry['type'] = item.type === 'project' ? 'project' : 'journal';
-                return {
-                    id: String(item.id || crypto.randomUUID()),
-                    content: String(item.content || ''),
-                    timestamp: typeof item.timestamp === 'number' ? item.timestamp : Date.now(),
-                    type: entryType,
-                    lastModified: typeof item.lastModified === 'number' ? item.lastModified : undefined,
-                };
-            })
-            .sort((a, b) => b.timestamp - a.timestamp);
-    } catch {
-        return [];
-    }
-};
-
-const saveFallbackEntry = (entry: JournalEntry): JournalEntry[] => {
-    const existing = loadFallbackEntries();
-    const next = [entry, ...existing].slice(0, 200);
-    localStorage.setItem(FALLBACK_JOURNAL_KEY, JSON.stringify(next));
-    return next;
-};
 
 export const Journal = () => {
     const { t, language } = useLanguage();
@@ -89,20 +65,32 @@ export const Journal = () => {
         );
     };
 
-    const maybeRecoverFallbackEntries = useCallback(async (db: IDBPDatabase<MyStatsDB>) => {
+    const maybeRecoverFallbackData = useCallback(async (db: IDBPDatabase<MyStatsDB>) => {
         if (migrationInProgress.current) return false;
-        const fallbackEntries = loadFallbackEntries();
-        if (!fallbackEntries.length) return false;
+        const fallbackEntries = loadFallbackJournalEntries();
+        const fallbackSkills = loadFallbackSkills();
+        const fallbackInsights = loadFallbackInsights();
+        if (!fallbackEntries.length && !fallbackSkills.length && !fallbackInsights.length) return false;
         migrationInProgress.current = true;
         setDbNotice(t('dbRecovering'));
         try {
-            const tx = db.transaction('journal', 'readwrite');
-            const store = tx.objectStore('journal');
+            const tx = db.transaction(['journal', 'skills', 'insights'], 'readwrite');
+            const journalStore = tx.objectStore('journal');
+            const skillStore = tx.objectStore('skills');
+            const insightStore = tx.objectStore('insights');
+
             for (const entry of fallbackEntries) {
-                await store.put(entry);
+                await journalStore.put(entry);
             }
+            for (const skill of fallbackSkills) {
+                await skillStore.put(skill);
+            }
+            for (const insight of fallbackInsights) {
+                await insightStore.put(insight);
+            }
+
             await tx.done;
-            localStorage.removeItem(FALLBACK_JOURNAL_KEY);
+            clearFallbackData();
             setDbNotice(t('dbRecovered'));
             setTimeout(() => setDbNotice(null), 4000);
             return true;
@@ -122,13 +110,13 @@ export const Journal = () => {
             setHistory(allEntries.reverse());
             setDbNotice(null);
             setAnalysisError(null);
-            const recovered = await maybeRecoverFallbackEntries(db);
+            const recovered = await maybeRecoverFallbackData(db);
             if (recovered) {
                 const refreshed = await db.getAllFromIndex('journal', 'by-date');
                 setHistory(refreshed.reverse());
             }
         } catch (error) {
-            setHistory(loadFallbackEntries());
+            setHistory(loadFallbackJournalEntries());
             setDbNotice(t('dbFallbackMode'));
             if (error instanceof Error) {
                 if (error.message === DB_ERRORS.blocked) {
@@ -144,7 +132,7 @@ export const Journal = () => {
                 setAnalysisError(t('saveFailed'));
             }
         }
-    }, [maybeRecoverFallbackEntries, t]);
+    }, [maybeRecoverFallbackData, t]);
 
     useEffect(() => {
         loadHistory();
@@ -197,49 +185,51 @@ export const Journal = () => {
                 type: 'journal',
                 lastModified: timestamp
             };
-            let db;
+            let db: IDBPDatabase<MyStatsDB> | null = null;
+            let useFallback = false;
+
             try {
                 db = await getDB();
                 setDbNotice(null);
             } catch (error) {
+                useFallback = true;
                 setDbNotice(t('dbFallbackMode'));
                 setAnalysisError(resolveDbErrorMessage(error));
-                const fallbackEntries = saveFallbackEntry(entry);
-                setHistory(fallbackEntries);
-                setStatus('saved');
-                setContent('');
-                return;
+                setHistory(saveFallbackJournalEntry(entry));
             }
-            const savePromise = db.put('journal', {
-                id: entryId,
-                content,
-                timestamp,
-                type: 'journal',
-                lastModified: timestamp
-            });
-            try {
-                await Promise.race([
-                    savePromise,
-                    new Promise((_, reject) => {
-                        setTimeout(() => reject(new Error(DB_ERRORS.timeout)), DB_OP_TIMEOUT_MS);
-                    }),
-                ]);
-            } catch (error) {
-                if (isDbFailure(error)) {
-                    setDbNotice(t('dbFallbackMode'));
-                    setAnalysisError(resolveDbErrorMessage(error));
-                    const fallbackEntries = saveFallbackEntry(entry);
-                    setHistory(fallbackEntries);
-                    setStatus('saved');
-                    setContent('');
-                    return;
+
+            if (!useFallback && db) {
+                const savePromise = db.put('journal', {
+                    id: entryId,
+                    content,
+                    timestamp,
+                    type: 'journal',
+                    lastModified: timestamp
+                });
+                try {
+                    await Promise.race([
+                        savePromise,
+                        new Promise((_, reject) => {
+                            setTimeout(() => reject(new Error(DB_ERRORS.timeout)), DB_OP_TIMEOUT_MS);
+                        }),
+                    ]);
+                } catch (error) {
+                    if (isDbFailure(error)) {
+                        useFallback = true;
+                        setDbNotice(t('dbFallbackMode'));
+                        setAnalysisError(resolveDbErrorMessage(error));
+                        setHistory(saveFallbackJournalEntry(entry));
+                    } else {
+                        throw error;
+                    }
                 }
-                throw error;
             }
 
             setStatus('saved');
             setContent('');
-            loadHistory();
+            if (!useFallback) {
+                loadHistory();
+            }
 
             let isAIConfigured = false;
             try {
@@ -266,8 +256,13 @@ export const Journal = () => {
                                 timestamp: timestamp,
                                 lastModified: timestamp
                             };
-                            await db.put('insights', insightData);
-                            setLastInsight(insightData);
+                            if (useFallback) {
+                                addFallbackInsight(insightData);
+                                setLastInsight(insightData);
+                            } else if (db) {
+                                await db.put('insights', insightData);
+                                setLastInsight(insightData);
+                            }
                         }
 
                         const categories: Array<{ items?: { name: string, category?: string }[], defaultCategory?: Skill['category'] }> = [
@@ -280,12 +275,17 @@ export const Journal = () => {
                         for (const group of categories) {
                             if (group.items) {
                                 for (const item of group.items) {
-                                    await upsertSkill({
-                                        name: item.name,
-                                        category: (group.defaultCategory || item.category) as Skill['category']
-                                    }, entryId);
+                                    const category = (group.defaultCategory || item.category) as Skill['category'];
+                                    if (useFallback) {
+                                        upsertFallbackSkill({ name: item.name, category }, entryId);
+                                    } else {
+                                        await upsertSkill({ name: item.name, category }, entryId);
+                                    }
                                 }
                             }
+                        }
+                        if (useFallback) {
+                            setHistory(loadFallbackJournalEntries());
                         }
                     } catch (err) {
                         console.error("AI Analysis failed", err);

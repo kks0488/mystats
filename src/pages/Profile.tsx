@@ -30,6 +30,7 @@ import { useLanguage } from '../hooks/useLanguage';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { loadFallbackSkills, loadFallbackInsights } from '../db/fallback';
 
 export const Profile = () => {
     const { t, language } = useLanguage();
@@ -48,9 +49,15 @@ export const Profile = () => {
             setDbNotice(null);
         } catch (error) {
             console.warn('Failed to load profile data', error);
-            setSkills([]);
-            setInsights([]);
-            setDbNotice(t('dbProfileUnavailable'));
+            const fallbackSkills = loadFallbackSkills();
+            const fallbackInsights = loadFallbackInsights();
+            setSkills(fallbackSkills);
+            setInsights(fallbackInsights);
+            setDbNotice(
+                fallbackSkills.length || fallbackInsights.length
+                    ? t('dbProfileFallback')
+                    : t('dbProfileUnavailable')
+            );
         }
     }, [t]);
 

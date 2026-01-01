@@ -44,6 +44,7 @@ export const translations = {
     dbResetBlocked: "Reset blocked by another tab. Close other tabs and retry.",
     dbResetFailed: "Failed to reset database. Check browser storage.",
     dbProfileUnavailable: "Database unavailable. Profile data cannot load.",
+    dbProfileFallback: "Database unavailable. Showing local fallback data.",
     charCount: "characters",
 
     // Profile
@@ -122,6 +123,7 @@ export const translations = {
     dbResetBlocked: "다른 탭에서 초기화를 막고 있습니다. 다른 탭을 닫고 다시 시도해 주세요.",
     dbResetFailed: "데이터베이스 초기화에 실패했습니다. 브라우저 저장소를 확인해 주세요.",
     dbProfileUnavailable: "데이터베이스를 사용할 수 없어 프로필을 불러올 수 없습니다.",
+    dbProfileFallback: "데이터베이스를 사용할 수 없어 로컬 데이터를 표시합니다.",
     charCount: "자",
 
     // Profile

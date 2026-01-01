@@ -24,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useLanguage } from '../hooks/useLanguage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { loadFallbackJournalEntries, loadFallbackSkills, loadFallbackInsights } from '../db/fallback';
 
 interface StatWidgetProps {
     title: string;
@@ -73,7 +74,11 @@ export const Home = () => {
                 setStats({ entries, skills, insights });
             } catch (error) {
                 console.warn('Failed to load stats', error);
-                setStats({ entries: 0, skills: 0, insights: 0 });
+                setStats({
+                    entries: loadFallbackJournalEntries().length,
+                    skills: loadFallbackSkills().length,
+                    insights: loadFallbackInsights().length,
+                });
             }
         };
         loadStats();

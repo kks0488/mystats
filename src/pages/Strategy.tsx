@@ -11,7 +11,8 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { getDB, DB_ERRORS } from '../db/db';
+import { getDB, DB_ERRORS, type Skill, type Insight } from '../db/db';
+import { loadFallbackSkills, loadFallbackInsights } from '../db/fallback';
 import { generateStrategy, checkAIStatus } from '../lib/ai-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -34,9 +35,19 @@ export const Strategy = () => {
         setErrorMessage(null);
 
         try {
-            const db = await getDB();
-            const skills = await db.getAll('skills');
-            const insights = await db.getAll('insights');
+            let skills: Skill[] = [];
+            let insights: Insight[] = [];
+            try {
+                const db = await getDB();
+                skills = await db.getAll('skills');
+                insights = await db.getAll('insights');
+            } catch (error) {
+                skills = loadFallbackSkills();
+                insights = loadFallbackInsights();
+                if (!skills.length && !insights.length) {
+                    throw error;
+                }
+            }
 
             if (skills.length === 0) {
                 alert(t('notEnoughData'));
