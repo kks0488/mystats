@@ -128,7 +128,7 @@ export const Journal = () => {
                         <Clock className="w-3 h-3" />
                         Memory Rail
                     </div>
-                    <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="space-y-3 max-h-[400px] md:max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                         {history.length === 0 ? (
                             <div className="p-8 text-center border-2 border-dashed border-border rounded-3xl opacity-50">
                                 <p className="text-[10px] font-black uppercase tracking-widest leading-relaxed">No pulses<br/>detected</p>
@@ -164,8 +164,8 @@ export const Journal = () => {
                 <div className="lg:col-span-9 relative group">
                     <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-[3rem] blur-2xl opacity-0 group-focus-within:opacity-100 transition duration-1000" />
                     <div className="relative bg-secondary/30 backdrop-blur-2xl border border-border rounded-[2.5rem] overflow-hidden">
-                        <div className="flex items-center justify-between px-8 py-4 border-b border-border bg-secondary/20">
-                            <div className="flex items-center gap-4 text-xs font-black uppercase tracking-widest text-muted-foreground">
+                        <div className="flex flex-wrap items-center justify-between gap-2 px-4 md:px-8 py-4 border-b border-border bg-secondary/20">
+                            <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs font-black uppercase tracking-widest text-muted-foreground">
                                 <Button 
                                     variant="ghost" 
                                     size="sm" 
@@ -173,11 +173,11 @@ export const Journal = () => {
                                         setSelectedEntryId(null);
                                         setContent('');
                                     }}
-                                    className="h-7 px-3 rounded-lg hover:bg-primary/10 text-primary border border-primary/20"
+                                    className="h-7 px-3 rounded-lg hover:bg-primary/10 text-primary border border-primary/20 text-[10px] md:text-xs"
                                 >
-                                    + NEW RECORD
+                                    + NEW
                                 </Button>
-                                <span className="flex items-center gap-1.5 border-r border-border pr-4 pl-2">
+                                <span className="hidden md:flex items-center gap-1.5 border-r border-border pr-4 pl-2">
                                     <Clock className="w-3.5 h-3.5" />
                                     {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </span>

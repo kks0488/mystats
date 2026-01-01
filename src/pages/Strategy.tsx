@@ -126,14 +126,14 @@ export const Strategy = () => {
                         </CardContent>
                     </Card>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="p-6 bg-secondary/10 border border-border rounded-[2rem] flex items-center gap-4 group">
-                            <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl group-hover:scale-110 transition-transform"><BrainCircuit size={20} /></div>
-                            <div className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none">Neural<br/><span className="text-foreground text-xs font-bold">Synchronized</span></div>
+                    <div className="hidden md:grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-secondary/10 border border-border rounded-2xl flex items-center gap-3 group">
+                            <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg group-hover:scale-110 transition-transform"><BrainCircuit size={16} /></div>
+                            <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none">Neural<br/><span className="text-foreground text-[10px] font-bold">Sync</span></div>
                         </div>
-                        <div className="p-6 bg-secondary/10 border border-border rounded-[2rem] flex items-center gap-4 group">
-                            <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl group-hover:scale-110 transition-transform"><ShieldCheck size={20} /></div>
-                            <div className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none">Intelligence<br/><span className="text-foreground text-xs font-bold">Verified</span></div>
+                        <div className="p-4 bg-secondary/10 border border-border rounded-2xl flex items-center gap-3 group">
+                            <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg group-hover:scale-110 transition-transform"><ShieldCheck size={16} /></div>
+                            <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none">Intel<br/><span className="text-foreground text-[10px] font-bold">Verified</span></div>
                         </div>
                     </div>
                 </div>

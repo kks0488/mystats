@@ -55,7 +55,7 @@ export const translations = {
     thinking: "Thinking...",
     generateStrategy: "Generate Strategy",
     personalizedStrategy: "Your Personalized Strategy",
-    strategistEmptyState: "Describe your challenge on the left to get started.",
+    strategistEmptyState: "Describe your challenge above to get started.",
     notEnoughData: "We don't have enough data about you yet. Try adding some journal entries first!",
     strategyFailed: "Failed to generate solution. Check your API key and try again."
   },
