@@ -29,6 +29,9 @@ export const translations = {
     analyzeSave: "Analyze & Save",
     saved: "Saved!",
     noApiKeyWarning: "No API Key found. Entries will be saved but not analyzed.",
+    apiKeyRequired: "Add an API key in Dashboard to enable AI features.",
+    analysisFailed: "AI analysis failed. Check your API key or model and try again.",
+    saveFailed: "Failed to save entry. Check browser storage and try again.",
     charCount: "characters",
 
     // Profile
@@ -59,6 +62,7 @@ export const translations = {
     strategistEmptyStateDesktop: "Describe your challenge to get started.",
     strategistEmptyStateMobile: "Describe your challenge to get started.",
     notEnoughData: "We don't have enough data about you yet. Try adding some journal entries first!",
+    strategyUnavailableTitle: "Strategy unavailable",
     strategyFailed: "Failed to generate solution. Check your API key and try again."
   },
   ko: {
@@ -91,6 +95,9 @@ export const translations = {
     analyzeSave: "분석 및 저장",
     saved: "저장 완료!",
     noApiKeyWarning: "API 키가 없습니다. 기록은 저장되지만 분석은 진행되지 않습니다.",
+    apiKeyRequired: "대시보드에서 API 키를 추가하면 AI 기능을 사용할 수 있습니다.",
+    analysisFailed: "AI 분석에 실패했습니다. API 키 또는 모델을 확인해 주세요.",
+    saveFailed: "저장에 실패했습니다. 브라우저 저장소를 확인해 주세요.",
     charCount: "자",
 
     // Profile
@@ -121,6 +128,7 @@ export const translations = {
     strategistEmptyStateDesktop: "고민을 적어주시면 전략 생성이 시작됩니다.",
     strategistEmptyStateMobile: "고민을 적어주시면 전략 생성이 시작됩니다.",
     notEnoughData: "아직 데이터가 충분하지 않습니다. 일기를 먼저 몇 개 더 작성해 주세요!",
+    strategyUnavailableTitle: "전략을 불러올 수 없습니다.",
     strategyFailed: "전략 생성에 실패했습니다. API 키를 확인하고 다시 시도해 주세요."
   }
 };

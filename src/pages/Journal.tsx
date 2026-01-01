@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Sparkles, 
   Loader2, 
@@ -22,10 +22,14 @@ import { cn } from '@/lib/utils';
 export const Journal = () => {
     const { t, language } = useLanguage();
     const [content, setContent] = useState('');
-    const [status, setStatus] = useState<'idle' | 'saving' | 'processing' | 'saved' | 'error'>('idle');
+    const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+    const [analysisError, setAnalysisError] = useState<string | null>(null);
     const [lastInsight, setLastInsight] = useState<Partial<Insight> | null>(null);
     const [history, setHistory] = useState<JournalEntry[]>([]);
     const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+    const [aiConfigured, setAiConfigured] = useState(false);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const analysisRunId = useRef(0);
 
     const loadHistory = useCallback(async () => {
         const db = await getDB();
@@ -35,11 +39,18 @@ export const Journal = () => {
 
     useEffect(() => {
         loadHistory();
+        try {
+            setAiConfigured(checkAIStatus().configured);
+        } catch {
+            setAiConfigured(false);
+        }
     }, [loadHistory]);
 
     const handleSave = async () => {
         if (!content.trim()) return;
         setStatus('saving');
+        setAnalysisError(null);
+        const entryContent = content;
         
         try {
             const db = await getDB();
@@ -54,57 +65,76 @@ export const Journal = () => {
                 lastModified: timestamp
             });
 
-            const aiStatus = checkAIStatus();
-            if (aiStatus.configured) {
-                setStatus('processing');
-                try {
-                    const result = await analyzeEntryWithAI(content, language);
-                    
-                    if (result.insight) {
-                        const insightData: Insight = {
-                            id: generateId(),
-                            entryId: entryId,
-                            ...result.insight,
-                            timestamp: timestamp,
-                            lastModified: timestamp
-                        };
-                        await db.put('insights', insightData);
-                        setLastInsight(insightData);
-                    }
-
-                    const categories: Array<{ items?: { name: string, category?: string }[], defaultCategory?: Skill['category'] }> = [
-                        { items: result.skills, defaultCategory: 'hard' },
-                        { items: result.traits, defaultCategory: 'trait' },
-                        { items: result.experiences, defaultCategory: 'experience' },
-                        { items: result.interests, defaultCategory: 'interest' }
-                    ];
-
-                    for (const group of categories) {
-                        if (group.items) {
-                            for (const item of group.items) {
-                                await upsertSkill({
-                                    name: item.name,
-                                    category: (group.defaultCategory || item.category) as Skill['category']
-                                }, entryId);
-                            }
-                        }
-                    }
-                } catch (err) {
-                    console.error("AI Analysis failed", err);
-                }
-            }
-
             setStatus('saved');
             setContent('');
             loadHistory();
+
+            let isAIConfigured = false;
+            try {
+                isAIConfigured = checkAIStatus().configured;
+                setAiConfigured(isAIConfigured);
+            } catch {
+                isAIConfigured = false;
+                setAiConfigured(false);
+            }
+
+            if (isAIConfigured) {
+                analysisRunId.current += 1;
+                const currentRun = analysisRunId.current;
+                setIsAnalyzing(true);
+                void (async () => {
+                    try {
+                        const result = await analyzeEntryWithAI(entryContent, language);
+                        
+                        if (result.insight) {
+                            const insightData: Insight = {
+                                id: generateId(),
+                                entryId: entryId,
+                                ...result.insight,
+                                timestamp: timestamp,
+                                lastModified: timestamp
+                            };
+                            await db.put('insights', insightData);
+                            setLastInsight(insightData);
+                        }
+
+                        const categories: Array<{ items?: { name: string, category?: string }[], defaultCategory?: Skill['category'] }> = [
+                            { items: result.skills, defaultCategory: 'hard' },
+                            { items: result.traits, defaultCategory: 'trait' },
+                            { items: result.experiences, defaultCategory: 'experience' },
+                            { items: result.interests, defaultCategory: 'interest' }
+                        ];
+
+                        for (const group of categories) {
+                            if (group.items) {
+                                for (const item of group.items) {
+                                    await upsertSkill({
+                                        name: item.name,
+                                        category: (group.defaultCategory || item.category) as Skill['category']
+                                    }, entryId);
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        console.error("AI Analysis failed", err);
+                        setAnalysisError(t('analysisFailed'));
+                    } finally {
+                        if (analysisRunId.current === currentRun) {
+                            setIsAnalyzing(false);
+                        }
+                    }
+                })();
+            }
             setTimeout(() => {
               setStatus('idle');
               setLastInsight(null);
+              setAnalysisError(null);
             }, 5000);
 
         } catch (error) {
             console.error('Failed to save', error);
             setStatus('error');
+            setAnalysisError(t('saveFailed'));
         }
     };
 
@@ -187,40 +217,60 @@ export const Journal = () => {
                                 </span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <div className={cn(
+                            <div className={cn(
                                     "w-2 h-2 rounded-full",
-                                    status === 'processing' ? "bg-amber-500 animate-pulse" : 
                                     status === 'saving' ? "bg-blue-500 animate-pulse" : 
+                                    status === 'error' ? "bg-destructive animate-pulse" :
+                                    isAnalyzing ? "bg-amber-500 animate-pulse" :
                                     "bg-emerald-500"
                                 )} />
                                 <span className="text-[10px] font-bold uppercase tracking-tighter text-muted-foreground">
-                                    {status === 'idle' ? 'System Ready' : status.toUpperCase()}
+                                    {status === 'idle'
+                                        ? (isAnalyzing ? t('analyzing') : 'System Ready')
+                                        : status.toUpperCase()}
                                 </span>
                             </div>
                         </div>
+
+                        {(!aiConfigured || analysisError) && (
+                            <div className="px-8 py-4 border-b border-border bg-background/40 space-y-2">
+                                {!aiConfigured && (
+                                    <div className="flex items-start gap-2 text-xs font-semibold text-amber-500">
+                                        <AlertCircle className="w-4 h-4 mt-0.5" />
+                                        <span>{t('noApiKeyWarning')}</span>
+                                    </div>
+                                )}
+                                {analysisError && (
+                                    <div className="flex items-start gap-2 text-xs font-semibold text-destructive">
+                                        <AlertCircle className="w-4 h-4 mt-0.5" />
+                                        <span>{analysisError}</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         <textarea
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
                             placeholder={t('journalPlaceholder')}
-                            disabled={status === 'saving' || status === 'processing'}
+                            disabled={status === 'saving'}
                             className="w-full min-h-[500px] p-10 bg-transparent resize-none focus:outline-none text-xl font-medium leading-relaxed placeholder:text-muted-foreground/30 custom-scrollbar"
                         />
 
                         <div className="p-6 flex items-center justify-end bg-secondary/10 border-t border-border">
                             <Button
                                 onClick={handleSave}
-                                disabled={!content.trim() || status === 'saving' || status === 'processing'}
+                                disabled={!content.trim() || status === 'saving'}
                                 className={cn(
                                     "h-14 px-10 rounded-2xl font-black tracking-tight transition-all active:scale-95 group",
                                     status === 'saved' ? "bg-emerald-500 hover:bg-emerald-600" : "bg-primary hover:bg-primary/90"
                                 )}
                             >
                                 <AnimatePresence mode="wait">
-                                    {status === 'saving' || status === 'processing' ? (
+                                    {status === 'saving' ? (
                                         <motion.div key="loading" initial={{opacity:0}} animate={{opacity:1}} className="flex items-center gap-3">
                                             <Loader2 className="w-5 h-5 animate-spin" />
-                                            <span>{status === 'processing' ? t('analyzing') : 'SAVING...'}</span>
+                                            <span>SAVING...</span>
                                         </motion.div>
                                     ) : status === 'saved' ? (
                                         <motion.div key="saved" initial={{opacity:0, scale:0.8}} animate={{opacity:1, scale:1}} className="flex items-center gap-2">
@@ -282,7 +332,7 @@ export const Journal = () => {
             {status === 'error' && (
                 <div className="flex items-center gap-3 p-6 bg-destructive/10 border border-destructive/20 rounded-[2rem] text-destructive">
                     <AlertCircle className="w-6 h-6" />
-                    <p className="font-bold tracking-tight">An error occurred while saving your entry. Please try again.</p>
+                    <p className="font-bold tracking-tight">{analysisError || t('saveFailed')}</p>
                 </div>
             )}
         </div>

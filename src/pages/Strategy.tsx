@@ -7,11 +7,12 @@ import {
   BrainCircuit,
   MessageSquareQuote,
   Zap,
-  ShieldCheck
+  ShieldCheck,
+  AlertTriangle
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { getDB } from '../db/db';
-import { generateStrategy } from '../lib/ai-provider';
+import { generateStrategy, checkAIStatus } from '../lib/ai-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -24,11 +25,13 @@ export const Strategy = () => {
     const [problem, setProblem] = useState('');
     const [solution, setSolution] = useState('');
     const [status, setStatus] = useState<'idle' | 'generating' | 'completed' | 'error'>('idle');
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     const handleGenerate = async () => {
         if (!problem.trim()) return;
         setStatus('generating');
         setSolution('');
+        setErrorMessage(null);
 
         try {
             const db = await getDB();
@@ -38,6 +41,18 @@ export const Strategy = () => {
             if (skills.length === 0) {
                 alert(t('notEnoughData'));
                 setStatus('idle');
+                return;
+            }
+
+            let aiConfigured = false;
+            try {
+                aiConfigured = checkAIStatus().configured;
+            } catch {
+                aiConfigured = false;
+            }
+            if (!aiConfigured) {
+                setErrorMessage(t('apiKeyRequired'));
+                setStatus('error');
                 return;
             }
 
@@ -61,6 +76,7 @@ export const Strategy = () => {
         } catch (error) {
             console.error("Strategy generation failed", error);
             setStatus('error');
+            setErrorMessage(error instanceof Error ? error.message : t('strategyFailed'));
         }
     };
 
@@ -173,6 +189,23 @@ export const Strategy = () => {
                                         <div className="space-y-3">
                                             <p className="text-2xl font-black text-foreground tracking-tight">Assembling Intelligence...</p>
                                             <p className="text-xs text-muted-foreground font-black tracking-widest uppercase">Processing identity markers & patterns</p>
+                                        </div>
+                                    </motion.div>
+                                ) : status === 'error' ? (
+                                    <motion.div
+                                        key="error"
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="h-full flex flex-col items-center justify-center text-center space-y-4"
+                                    >
+                                        <div className="w-16 h-16 bg-destructive/10 text-destructive rounded-full flex items-center justify-center">
+                                            <AlertTriangle className="w-8 h-8" />
+                                        </div>
+                                        <div className="max-w-md space-y-2">
+                                            <p className="text-lg font-bold text-foreground">{t('strategyUnavailableTitle')}</p>
+                                            <p className="text-sm text-muted-foreground">
+                                                {errorMessage || t('strategyFailed')}
+                                            </p>
                                         </div>
                                     </motion.div>
                                 ) : solution ? (
