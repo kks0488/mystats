@@ -12,7 +12,7 @@ import {
   Zap
 } from 'lucide-react';
 import { getDB, upsertSkill, type Skill, type Insight, type JournalEntry } from '../db/db';
-import { analyzeEntryWithAI } from '../lib/gemini';
+import { analyzeEntryWithAI } from '../lib/ai-provider';
 import { generateId } from '../lib/utils';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '../hooks/useLanguage';
