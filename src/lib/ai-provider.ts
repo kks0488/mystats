@@ -24,8 +24,8 @@ export const AI_PROVIDERS: Record<AIProvider, { name: string; models: string[]; 
   },
   openai: {
     name: 'OpenAI',
-    models: ['gpt-5', 'gpt-5-mini', 'gpt-5-nano', 'gpt-4o', 'gpt-4o-mini'],
-    defaultModel: 'gpt-5',
+    models: ['gpt-5.2-2025-12-11', 'gpt-5', 'gpt-5-mini', 'gpt-4o', 'gpt-4o-mini'],
+    defaultModel: 'gpt-5.2-2025-12-11',
     apiUrl: 'https://api.openai.com/v1',
   },
   claude: {
@@ -36,8 +36,8 @@ export const AI_PROVIDERS: Record<AIProvider, { name: string; models: string[]; 
   },
   grok: {
     name: 'xAI Grok',
-    models: ['grok-4', 'grok-4-fast-reasoning', 'grok-4-fast-non-reasoning', 'grok-3'],
-    defaultModel: 'grok-4',
+    models: ['grok-4-1-fast-reasoning', 'grok-4', 'grok-4-fast-reasoning', 'grok-3'],
+    defaultModel: 'grok-4-1-fast-reasoning',
     apiUrl: 'https://api.x.ai/v1',
   },
 };
