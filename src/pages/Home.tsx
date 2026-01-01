@@ -177,9 +177,10 @@ export const Home = () => {
                                 <AnimatePresence>
                                     {showProviderDropdown && (
                                         <motion.div
-                                            initial={{ opacity: 0, y: -10 }}
+                                            initial={{ opacity: 0, y: -5 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -10 }}
+                                            exit={{ opacity: 0, y: -5 }}
+                                            transition={{ duration: 0.1 }}
                                             className="absolute z-10 w-full mt-2 bg-background border border-border rounded-xl shadow-xl overflow-hidden"
                                         >
                                             {(Object.keys(AI_PROVIDERS) as AIProvider[]).map((p) => (
@@ -220,9 +221,10 @@ export const Home = () => {
                                 <AnimatePresence>
                                     {showModelDropdown && (
                                         <motion.div
-                                            initial={{ opacity: 0, y: -10 }}
+                                            initial={{ opacity: 0, y: -5 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -10 }}
+                                            exit={{ opacity: 0, y: -5 }}
+                                            transition={{ duration: 0.1 }}
                                             className="absolute z-10 w-full mt-2 bg-background border border-border rounded-xl shadow-xl overflow-hidden max-h-48 overflow-y-auto"
                                         >
                                             {providerInfo.models.map((m) => (

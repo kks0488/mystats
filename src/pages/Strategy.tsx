@@ -191,7 +191,10 @@ export const Strategy = () => {
                                             <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary/20 rounded-full animate-pulse" />
                                         </div>
                                         <div className="max-w-xs space-y-3">
-                                            <p className="text-xl font-bold text-muted-foreground">{t('strategistEmptyState')}</p>
+                                            <p className="text-xl font-bold text-muted-foreground">
+                                                <span className="hidden lg:inline">Describe your challenge on the left to get started.</span>
+                                                <span className="lg:hidden">Describe your challenge above to get started.</span>
+                                            </p>
                                             <p className="text-sm text-muted-foreground/60 leading-relaxed font-medium">
                                                 Provide a core challenge to begin strategic alignment with your unique capability profile.
                                             </p>
