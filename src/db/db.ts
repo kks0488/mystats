@@ -72,7 +72,7 @@ interface MyStatsDB extends DBSchema {
 }
 
 const DB_NAME = 'mystats-db';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 /**
  * Ensures the storage is persistent and not cleared by the browser automatically.
@@ -109,14 +109,23 @@ export const initDB = async () => {
         }
       }
 
-      if (oldVersion < 4) {
+      if (oldVersion < 5) {
         if (!db.objectStoreNames.contains('journal')) {
           const journalStore = db.createObjectStore('journal', { keyPath: 'id' });
           journalStore.createIndex('by-date', 'timestamp');
         }
-        if (!db.objectStoreNames.contains('skills')) db.createObjectStore('skills', { keyPath: 'id' }).createIndex('by-category', 'category');
-        if (!db.objectStoreNames.contains('solutions')) db.createObjectStore('solutions', { keyPath: 'id' }).createIndex('by-date', 'timestamp');
-        if (!db.objectStoreNames.contains('insights')) db.createObjectStore('insights', { keyPath: 'id' }).createIndex('by-entry', 'entryId');
+        if (!db.objectStoreNames.contains('skills')) {
+          const skillStore = db.createObjectStore('skills', { keyPath: 'id' });
+          skillStore.createIndex('by-category', 'category');
+        }
+        if (!db.objectStoreNames.contains('solutions')) {
+          const solutionStore = db.createObjectStore('solutions', { keyPath: 'id' });
+          solutionStore.createIndex('by-date', 'timestamp');
+        }
+        if (!db.objectStoreNames.contains('insights')) {
+          const insightStore = db.createObjectStore('insights', { keyPath: 'id' });
+          insightStore.createIndex('by-entry', 'entryId');
+        }
       }
     },
   });
