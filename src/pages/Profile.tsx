@@ -313,38 +313,38 @@ export const Profile = () => {
                         {/* Phase 3: Deep Existential Core */}
                         {safeInsights.length > 0 && (
                             <div className="relative group">
-                                <div className="absolute -inset-4 bg-gradient-to-r from-primary/10 via-amber-500/5 to-secondary/10 rounded-[2.5rem] blur-2xl opacity-50 group-hover:opacity-100 transition duration-1000" />
-                                <div className="relative p-8 bg-black/40 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] space-y-8 overflow-hidden">
-                                     <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/20 blur-[80px] rounded-full" />
+                                <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/30 rounded-[2.5rem] blur-2xl opacity-60 group-hover:opacity-100 transition duration-1000" />
+                                <div className="relative p-8 bg-primary/15 backdrop-blur-3xl border border-primary/20 rounded-[2.5rem] space-y-8 overflow-hidden">
+                                     <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/30 blur-[80px] rounded-full" />
                                      <div className="flex items-start justify-between">
                                          <div className="space-y-2">
-                                             <div className="flex items-center gap-2 text-amber-500 font-mono text-[10px] font-black uppercase tracking-[0.4em]">
+                                             <div className="flex items-center gap-2 text-primary-foreground/80 font-mono text-[10px] font-black uppercase tracking-[0.4em]">
                                                  <Cpu className="w-3 h-3" />
                                                  Existential Strategist Result
                                              </div>
-                                             <h2 className="text-4xl font-black tracking-tighter bg-gradient-to-br from-white to-white/40 bg-clip-text text-transparent italic">
+                                             <h2 className="text-4xl font-black tracking-tighter bg-gradient-to-br from-white to-white/70 bg-clip-text text-transparent italic">
                                                  {safeInsights[safeInsights.length - 1].archetypes?.[0] || "Root Consciousness"}
                                              </h2>
                                          </div>
-                                         <div className="px-4 py-2 bg-primary/20 border border-primary/30 rounded-full text-[10px] font-black uppercase tracking-widest text-primary animate-pulse">
+                                         <div className="px-4 py-2 bg-primary/20 border border-primary/30 rounded-full text-[10px] font-black uppercase tracking-widest text-primary-foreground animate-pulse">
                                              Phase 3 Active
                                          </div>
                                      </div>
 
                                      <div className="grid md:grid-cols-2 gap-8 relative z-10">
                                          <div className="space-y-4">
-                                             <p className="text-sm font-medium text-muted-foreground uppercase tracking-[0.2em] flex items-center gap-2">
-                                                 <Fingerprint size={12} className="text-primary" /> Meta-Pattern
+                                             <p className="text-sm font-medium text-primary-foreground/70 uppercase tracking-[0.2em] flex items-center gap-2">
+                                                 <Fingerprint size={12} className="text-primary-foreground/80" /> Meta-Pattern
                                              </p>
-                                             <div className="text-xl font-bold leading-relaxed text-white/90">
+                                             <div className="text-xl font-bold leading-relaxed text-primary-foreground">
                                                  "{safeInsights[safeInsights.length - 1].hiddenPatterns?.[0]}"
                                              </div>
                                          </div>
                                          <div className="space-y-4">
-                                             <p className="text-sm font-medium text-muted-foreground uppercase tracking-[0.2em] flex items-center gap-2">
+                                             <p className="text-sm font-medium text-primary-foreground/70 uppercase tracking-[0.2em] flex items-center gap-2">
                                                  <Zap size={12} className="text-destructive" /> Core Probe
                                              </p>
-                                             <div className="text-xl font-medium italic leading-relaxed text-white/70">
+                                             <div className="text-xl font-medium italic leading-relaxed text-primary-foreground/85">
                                                  "{safeInsights[safeInsights.length - 1].criticalQuestions?.[0]}"
                                              </div>
                                          </div>

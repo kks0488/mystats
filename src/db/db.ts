@@ -1,4 +1,4 @@
-import { openDB, type DBSchema } from 'idb';
+import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { z } from 'zod';
 
 // --- Zod Schemas for Production Validation ---
@@ -72,7 +72,7 @@ export interface MyStatsDB extends DBSchema {
 }
 
 export const DB_NAME = 'mystats-db';
-const DB_VERSION = 6;
+const DB_VERSION = 7;
 const DB_OPEN_TIMEOUT_MS = 8000;
 export const DB_OP_TIMEOUT_MS = 8000;
 
@@ -80,6 +80,25 @@ export const DB_ERRORS = {
     blocked: 'DB_BLOCKED',
     timeout: 'DB_TIMEOUT',
 } as const;
+
+const ensureStores = (db: IDBPDatabase<MyStatsDB>) => {
+  if (!db.objectStoreNames.contains('journal')) {
+    const entryStore = db.createObjectStore('journal', { keyPath: 'id' });
+    entryStore.createIndex('by-date', 'timestamp');
+  }
+  if (!db.objectStoreNames.contains('skills')) {
+    const skillStore = db.createObjectStore('skills', { keyPath: 'id' });
+    skillStore.createIndex('by-category', 'category');
+  }
+  if (!db.objectStoreNames.contains('solutions')) {
+    const solutionStore = db.createObjectStore('solutions', { keyPath: 'id' });
+    solutionStore.createIndex('by-date', 'timestamp');
+  }
+  if (!db.objectStoreNames.contains('insights')) {
+    const insightStore = db.createObjectStore('insights', { keyPath: 'id' });
+    insightStore.createIndex('by-entry', 'entryId');
+  }
+};
 
 /**
  * Ensures the storage is persistent and not cleared by the browser automatically.
@@ -98,60 +117,8 @@ export const initDB = async () => {
   let isBlocked = false;
   const openPromise = openDB<MyStatsDB>(DB_NAME, DB_VERSION, {
     upgrade(db, oldVersion) {
-      if (oldVersion < 1) {
-        if (!db.objectStoreNames.contains('journal')) {
-          const entryStore = db.createObjectStore('journal', { keyPath: 'id' });
-          entryStore.createIndex('by-date', 'timestamp');
-        }
-        if (!db.objectStoreNames.contains('skills')) {
-          const skillStore = db.createObjectStore('skills', { keyPath: 'id' });
-          skillStore.createIndex('by-category', 'category');
-        }
-        if (!db.objectStoreNames.contains('solutions')) {
-          const solutionStore = db.createObjectStore('solutions', { keyPath: 'id' });
-          solutionStore.createIndex('by-date', 'timestamp');
-        }
-        if (!db.objectStoreNames.contains('insights')) {
-          const insightStore = db.createObjectStore('insights', { keyPath: 'id' });
-          insightStore.createIndex('by-entry', 'entryId');
-        }
-      }
-
-      if (oldVersion < 5) {
-        if (!db.objectStoreNames.contains('journal')) {
-          const journalStore = db.createObjectStore('journal', { keyPath: 'id' });
-          journalStore.createIndex('by-date', 'timestamp');
-        }
-        if (!db.objectStoreNames.contains('skills')) {
-          const skillStore = db.createObjectStore('skills', { keyPath: 'id' });
-          skillStore.createIndex('by-category', 'category');
-        }
-        if (!db.objectStoreNames.contains('solutions')) {
-          const solutionStore = db.createObjectStore('solutions', { keyPath: 'id' });
-          solutionStore.createIndex('by-date', 'timestamp');
-        }
-        if (!db.objectStoreNames.contains('insights')) {
-          const insightStore = db.createObjectStore('insights', { keyPath: 'id' });
-          insightStore.createIndex('by-entry', 'entryId');
-        }
-      }
-      if (oldVersion < 6) {
-        if (!db.objectStoreNames.contains('journal')) {
-          const journalStore = db.createObjectStore('journal', { keyPath: 'id' });
-          journalStore.createIndex('by-date', 'timestamp');
-        }
-        if (!db.objectStoreNames.contains('skills')) {
-          const skillStore = db.createObjectStore('skills', { keyPath: 'id' });
-          skillStore.createIndex('by-category', 'category');
-        }
-        if (!db.objectStoreNames.contains('solutions')) {
-          const solutionStore = db.createObjectStore('solutions', { keyPath: 'id' });
-          solutionStore.createIndex('by-date', 'timestamp');
-        }
-        if (!db.objectStoreNames.contains('insights')) {
-          const insightStore = db.createObjectStore('insights', { keyPath: 'id' });
-          insightStore.createIndex('by-entry', 'entryId');
-        }
+      if (oldVersion < DB_VERSION) {
+        ensureStores(db);
       }
     },
     blocked() {

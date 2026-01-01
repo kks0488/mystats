@@ -103,10 +103,6 @@ export const Home = () => {
         setTimeout(() => setIsSaved(false), 2000);
     };
 
-    const toggleLanguage = () => {
-        setLanguage(language === 'ko' ? 'en' : 'ko');
-    };
-
     const providerInfo = AI_PROVIDERS[provider];
 
     return (
@@ -123,12 +119,6 @@ export const Home = () => {
                             {t('dashboardDesc')}
                         </p>
                     </div>
-                    <button 
-                        onClick={toggleLanguage}
-                        className="px-6 py-2.5 bg-secondary text-sm font-bold rounded-full border border-border hover:bg-muted transition-colors active:scale-95"
-                    >
-                        {language === 'ko' ? 'Switch to English' : '한국어로 변경'}
-                    </button>
                 </div>
             </header>
 
@@ -339,6 +329,40 @@ export const Home = () => {
                         <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                     </a>
                 </Card>
+            </div>
+
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-6 py-5 bg-secondary/20 border border-border rounded-[2rem]">
+                <div className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground">
+                    {t('language')}
+                </div>
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setLanguage('en')}
+                        aria-pressed={language === 'en'}
+                        className={cn(
+                            "h-10 px-4 rounded-full text-sm font-bold border transition-colors active:scale-95",
+                            language === 'en'
+                                ? "bg-primary text-primary-foreground border-primary/40"
+                                : "bg-background/60 text-muted-foreground border-border hover:bg-muted"
+                        )}
+                    >
+                        EN
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setLanguage('ko')}
+                        aria-pressed={language === 'ko'}
+                        className={cn(
+                            "h-10 px-4 rounded-full text-sm font-bold border transition-colors active:scale-95",
+                            language === 'ko'
+                                ? "bg-primary text-primary-foreground border-primary/40"
+                                : "bg-background/60 text-muted-foreground border-border hover:bg-muted"
+                        )}
+                    >
+                        KO
+                    </button>
+                </div>
             </div>
         </div>
     );
