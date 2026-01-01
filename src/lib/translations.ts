@@ -34,6 +34,7 @@ export const translations = {
     saveFailed: "Failed to save entry. Check browser storage and try again.",
     dbBlocked: "Database is blocked by another tab. Close other tabs and retry.",
     dbTimeout: "Database is taking too long to open. Check browser storage and retry.",
+    dbMissingStore: "Database schema is out of sync. Refresh the page and retry.",
     charCount: "characters",
 
     // Profile
@@ -102,6 +103,7 @@ export const translations = {
     saveFailed: "저장에 실패했습니다. 브라우저 저장소를 확인해 주세요.",
     dbBlocked: "다른 탭에서 데이터베이스가 잠겨 있습니다. 다른 탭을 닫고 다시 시도해 주세요.",
     dbTimeout: "데이터베이스 로딩이 지연됩니다. 브라우저 저장소를 확인해 주세요.",
+    dbMissingStore: "데이터베이스 스키마가 맞지 않습니다. 새로고침 후 다시 시도해 주세요.",
     charCount: "자",
 
     // Profile

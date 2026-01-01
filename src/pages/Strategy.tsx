@@ -81,6 +81,8 @@ export const Strategy = () => {
                     setErrorMessage(t('dbBlocked'));
                 } else if (error.message === DB_ERRORS.timeout) {
                     setErrorMessage(t('dbTimeout'));
+                } else if (error.name === 'NotFoundError' || error.message.includes('object stores')) {
+                    setErrorMessage(t('dbMissingStore'));
                 } else {
                     setErrorMessage(error.message || t('strategyFailed'));
                 }

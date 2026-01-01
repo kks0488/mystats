@@ -144,6 +144,8 @@ export const Journal = () => {
                     setAnalysisError(t('dbBlocked'));
                 } else if (error.message === DB_ERRORS.timeout) {
                     setAnalysisError(t('dbTimeout'));
+                } else if (error.name === 'NotFoundError' || error.message.includes('object stores')) {
+                    setAnalysisError(t('dbMissingStore'));
                 } else {
                     setAnalysisError(error.message || t('saveFailed'));
                 }
