@@ -20,6 +20,7 @@
 
 <p align="center">
   <a href="#features"><strong>Features</strong></a> ·
+  <a href="#3-step-usage-guide"><strong>3-Step Guide</strong></a> ·
   <a href="#demo"><strong>Demo</strong></a> ·
   <a href="#quick-start"><strong>Quick Start</strong></a> ·
   <a href="#tech-stack"><strong>Tech Stack</strong></a> ·
