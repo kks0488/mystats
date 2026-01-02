@@ -89,6 +89,32 @@ Describe a problem. Get a **ruthlessly personalized solution**:
 
 ---
 
+## 📘 3-Step Usage Guide
+
+> **"Feed your data, get a strategy playbook."**
+
+### STEP 1. Add an API Key
+This is a local-first app with no server. To borrow a brain, you need an API key.
+- Recommended: Google Gemini (free key available)
+- Safe by design: Your key stays only in your browser
+
+### STEP 2. Journal Freely
+Write everything about you in the Journal tab. No format required.
+- Life path summary
+- Skills and weaknesses
+- Recent wins and failures
+- The problem you're stuck on right now
+
+**Tip:** The more specific you are, the sharper the analysis.
+
+### STEP 3. See Your Strategy + Profile
+Once data accumulates, the AI turns it into insight.
+- **Strategy:** A personalized playbook based on your strengths
+- **Hidden Patterns:** Cold, third-person analysis of your behavior
+- **Critical Questions:** Sharp prompts that force deeper reflection
+
+---
+
 ## 🎬 Demo
 
 <p align="center">
