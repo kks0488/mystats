@@ -90,28 +90,23 @@ Describe a problem. Get a **ruthlessly personalized solution**:
 ---
 
 ## 📘 3-Step Usage Guide
+**"Input your raw thoughts, AI generates your life strategy guide."**
 
-> **"Feed your data, get a strategy playbook."**
+### 1) Add an API Key
+MyStats is **local-first** with no backend.
+- **Setup:** Settings → API Key → Save
+- **Recommended:** Google Gemini (free)
+- **Privacy:** Your key/data stay only in your browser (no servers).
 
-### STEP 1. Add an API Key
-This is a local-first app with no server. To borrow a brain, you need an API key.
-- Recommended: Google Gemini (free key available)
-- Safe by design: Your key stays only in your browser
+### 2) Journal Freely
+Write anything in `Journal` (no format required).
+- Life path, skills/weaknesses, wins/fails, current struggles
+- **Tip:** The more specific, the sharper the analysis.
 
-### STEP 2. Journal Freely
-Write everything about you in the Journal tab. No format required.
-- Life path summary
-- Skills and weaknesses
-- Recent wins and failures
-- The problem you're stuck on right now
-
-**Tip:** The more specific you are, the sharper the analysis.
-
-### STEP 3. See Your Strategy + Profile
-Once data accumulates, the AI turns it into insight.
-- **Strategy:** A personalized playbook based on your strengths
-- **Hidden Patterns:** Cold, third-person analysis of your behavior
-- **Critical Questions:** Sharp prompts that force deeper reflection
+### 3) Get Insights
+Once you have entries, the AI turns them into insight.
+- **🎯 Strategy:** A personalized plan based on your stats
+- **🧠 Profile:** Hidden patterns + deep questions for growth
 
 ---
 
