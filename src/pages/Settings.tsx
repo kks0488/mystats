@@ -43,6 +43,13 @@ import {
 
 type StorageMode = 'db' | 'fallback' | 'memory';
 
+const API_KEY_LINKS: Record<AIProvider, string> = {
+  gemini: 'https://aistudio.google.com/app/apikey',
+  openai: 'https://platform.openai.com/api-keys',
+  claude: 'https://console.anthropic.com/settings/keys',
+  grok: 'https://console.x.ai/',
+};
+
 const normalizeSkillName = (value: string) =>
   value
     .trim()
@@ -102,6 +109,7 @@ export const Settings = () => {
   const [storageMode, setStorageMode] = useState<StorageMode>('db');
 
   const providerInfo = AI_PROVIDERS[provider];
+  const apiKeyLink = API_KEY_LINKS[provider];
 
   const refreshStorageMode = useCallback(async () => {
     try {
@@ -500,9 +508,19 @@ export const Settings = () => {
                   )}
                 </AnimatePresence>
               </Button>
-              <p className="text-xs text-center text-muted-foreground leading-relaxed px-4">
-                {t('apiKeyNote')}
-              </p>
+              <div className="space-y-2 text-center">
+                <p className="text-xs text-muted-foreground leading-relaxed px-4">
+                  {t('apiKeyNote')}
+                </p>
+                <a
+                  href={apiKeyLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs font-bold text-primary hover:underline underline-offset-4"
+                >
+                  {t('getApiKey')}
+                </a>
+              </div>
             </div>
           </CardContent>
         </Card>
