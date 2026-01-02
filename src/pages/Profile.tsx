@@ -338,6 +338,13 @@ export const Profile = () => {
             const req = indexedDB.deleteDatabase(DB_NAME);
             req.onsuccess = () => {
                 setIsResettingDb(false);
+                try {
+                    localStorage.removeItem('MYSTATS_FALLBACK_JOURNAL');
+                    localStorage.removeItem('MYSTATS_FALLBACK_SKILLS');
+                    localStorage.removeItem('MYSTATS_FALLBACK_INSIGHTS');
+                } catch {
+                    // Ignore storage errors
+                }
                 window.location.reload();
             };
             req.onerror = () => {

@@ -9,9 +9,9 @@ import {
   CheckCircle2,
   Settings2,
   LayoutDashboard,
-  Cpu,
   ChevronDown,
-  Circle
+  Circle,
+  Cpu
 } from 'lucide-react';
 import { getDB } from '../db/db';
 import { 
@@ -61,7 +61,6 @@ export const Home = () => {
     const [showProviderDropdown, setShowProviderDropdown] = useState(false);
     const [showModelDropdown, setShowModelDropdown] = useState(false);
     const [aiConfigured, setAiConfigured] = useState(false);
-    const [demoStatus, setDemoStatus] = useState<'idle' | 'loading' | 'seeded' | 'fallback' | 'skipped' | 'failed'>('idle');
 
     const loadStats = useCallback(async () => {
         try {
@@ -137,36 +136,7 @@ export const Home = () => {
         },
     ];
     const completedSteps = quickSteps.filter(step => step.done).length;
-    const hasData = stats.entries > 0 || stats.skills > 0 || stats.insights > 0;
-    const demoMessage =
-        demoStatus === 'seeded' ? t('demoSeeded')
-        : demoStatus === 'fallback' ? t('demoSeededFallback')
-        : demoStatus === 'skipped' ? t('demoExists')
-        : demoStatus === 'failed' ? t('demoFailed')
-        : null;
-
-    const handleLoadDemo = async () => {
-        if (demoStatus === 'loading') return;
-        setDemoStatus('loading');
-        try {
-            const { seedDemoData } = await import('../db/demoData');
-            const result = await seedDemoData(language);
-            if (result === 'db') {
-                setDemoStatus('seeded');
-            } else if (result === 'fallback') {
-                setDemoStatus('fallback');
-            } else if (result === 'skipped') {
-                setDemoStatus('skipped');
-            } else {
-                setDemoStatus('failed');
-            }
-            await loadStats();
-            window.dispatchEvent(new Event('mystats-data-updated'));
-        } catch (error) {
-            console.warn('Failed to load demo data', error);
-            setDemoStatus('failed');
-        }
-    };
+    
 
     return (
         <div className="max-w-6xl mx-auto space-y-12 pb-20">
@@ -249,35 +219,6 @@ export const Home = () => {
                                 <Link to="/profile">{t('quickStartGoProfile')}</Link>
                             </Button>
                         </div>
-                    </CardContent>
-                </Card>
-                )}
-                {!hasData && (
-                <Card className="bg-secondary/20 border-border backdrop-blur-xl rounded-[2rem] overflow-hidden">
-                    <CardHeader className="p-8 pb-4">
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-primary/10 text-primary rounded-xl">
-                                <Cpu className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <CardTitle className="text-xl font-black tracking-tight">{t('demoTitle')}</CardTitle>
-                                <CardDescription className="text-muted-foreground font-semibold">
-                                    {t('demoDesc')}
-                                </CardDescription>
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="p-8 pt-2 space-y-4">
-                        <Button
-                            onClick={handleLoadDemo}
-                            className="w-full h-11 rounded-xl font-bold"
-                            disabled={demoStatus === 'loading'}
-                        >
-                            {demoStatus === 'loading' ? t('demoLoading') : t('demoAction')}
-                        </Button>
-                        {demoMessage && (
-                            <p className="text-xs font-semibold text-muted-foreground">{demoMessage}</p>
-                        )}
                     </CardContent>
                 </Card>
                 )}

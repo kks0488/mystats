@@ -17,9 +17,7 @@ function App() {
         const { recoverFromMirror } = await import('./db/db');
         await recoverFromMirror();
         
-        // Seed demo data on first visit
-        const { seedDemoData } = await import('./db/demoData');
-        await seedDemoData();
+        // Demo data seeding removed
       } catch (err) {
         console.error("Initialization failed:", err);
       }
