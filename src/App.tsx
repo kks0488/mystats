@@ -8,6 +8,7 @@ const Home = lazy(() => import('./pages/Home').then(module => ({ default: module
 const Journal = lazy(() => import('./pages/Journal').then(module => ({ default: module.Journal })));
 const Profile = lazy(() => import('./pages/Profile').then(module => ({ default: module.Profile })));
 const Strategy = lazy(() => import('./pages/Strategy').then(module => ({ default: module.Strategy })));
+const Settings = lazy(() => import('./pages/Settings').then(module => ({ default: module.Settings })));
 
 function App() {
   useEffect(() => {
@@ -40,6 +41,7 @@ function App() {
             <Route path="journal" element={<Suspense fallback={pageFallback}><Journal /></Suspense>} />
             <Route path="profile" element={<Suspense fallback={pageFallback}><Profile /></Suspense>} />
             <Route path="strategy" element={<Suspense fallback={pageFallback}><Strategy /></Suspense>} />
+            <Route path="settings" element={<Suspense fallback={pageFallback}><Settings /></Suspense>} />
           </Route>
         </Routes>
       </BrowserRouter>

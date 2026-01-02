@@ -1,32 +1,24 @@
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  Key, 
-  BarChart3, 
-  BookOpen, 
-  Sparkles, 
-  ChevronRight,
+import {
+  BarChart3,
+  BookOpen,
+  Sparkles,
   ShieldCheck,
   CheckCircle2,
   Settings2,
   LayoutDashboard,
-  ChevronDown,
   Circle,
-  Cpu
+  ChevronRight,
 } from 'lucide-react';
 import { getDB } from '../db/db';
-import { 
-  getAIConfig, 
-  setAIConfig, 
-  AI_PROVIDERS, 
-  type AIProvider 
-} from '../lib/ai-provider';
+import { checkAIStatus } from '../lib/ai-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useLanguage } from '../hooks/useLanguage';
-import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { loadFallbackJournalEntries, loadFallbackSkills, loadFallbackInsights } from '../db/fallback';
+import { loadFallbackJournalEntries, loadFallbackSkills, loadFallbackInsights, getFallbackStorageMode } from '../db/fallback';
 import { Link } from 'react-router-dom';
+import type { JournalEntry, Insight } from '../db/db';
 
 interface StatWidgetProps {
     title: string;
@@ -53,71 +45,52 @@ const StatWidget = ({ title, value, icon: Icon, color }: StatWidgetProps) => (
 
 export const Home = () => {
     const { t, language, setLanguage } = useLanguage();
-    const [provider, setProvider] = useState<AIProvider>('gemini');
-    const [apiKey, setApiKey] = useState('');
-    const [selectedModel, setSelectedModel] = useState('');
-    const [isSaved, setIsSaved] = useState(false);
     const [stats, setStats] = useState({ entries: 0, skills: 0, insights: 0 });
-    const [showProviderDropdown, setShowProviderDropdown] = useState(false);
-    const [showModelDropdown, setShowModelDropdown] = useState(false);
     const [aiConfigured, setAiConfigured] = useState(false);
+    const [storageMode, setStorageMode] = useState<'db' | 'fallback' | 'memory'>('db');
+    const [recentEntries, setRecentEntries] = useState<JournalEntry[]>([]);
+    const [latestInsight, setLatestInsight] = useState<Insight | null>(null);
 
-    const loadStats = useCallback(async () => {
+    const loadDashboard = useCallback(async () => {
+        const status = checkAIStatus();
+        setAiConfigured(status.configured);
         try {
             const db = await getDB();
-            const entries = await db.count('journal');
-            const skills = await db.count('skills');
-            const insights = await db.count('insights');
-            setStats({ entries, skills, insights });
+            const entries = await db.getAllFromIndex('journal', 'by-date');
+            const skills = await db.getAll('skills');
+            const insights = await db.getAll('insights');
+            setStats({ entries: entries.length, skills: skills.length, insights: insights.length });
+            setRecentEntries(entries.slice(-3).reverse());
+            const latest = [...insights].sort((a, b) => b.timestamp - a.timestamp)[0];
+            setLatestInsight(latest || null);
+            setStorageMode('db');
         } catch (error) {
             console.warn('Failed to load stats', error);
+            const fallbackEntries = loadFallbackJournalEntries();
+            const fallbackSkills = loadFallbackSkills();
+            const fallbackInsights = loadFallbackInsights();
             setStats({
-                entries: loadFallbackJournalEntries().length,
-                skills: loadFallbackSkills().length,
-                insights: loadFallbackInsights().length,
+                entries: fallbackEntries.length,
+                skills: fallbackSkills.length,
+                insights: fallbackInsights.length,
             });
+            setRecentEntries(fallbackEntries.slice(0, 3));
+            setLatestInsight(fallbackInsights[0] || null);
+            setStorageMode(getFallbackStorageMode() === 'memory' ? 'memory' : 'fallback');
         }
     }, []);
 
     useEffect(() => {
-        const config = getAIConfig();
-        setProvider(config.provider);
-        setApiKey(config.apiKey);
-        setSelectedModel(config.model || AI_PROVIDERS[config.provider].defaultModel);
-        setAiConfigured(!!config.apiKey);
-        loadStats();
-    }, [loadStats]);
+        loadDashboard();
+    }, [loadDashboard]);
 
     useEffect(() => {
         const handleUpdate = () => {
-            loadStats();
+            loadDashboard();
         };
         window.addEventListener('mystats-data-updated', handleUpdate);
         return () => window.removeEventListener('mystats-data-updated', handleUpdate);
-    }, [loadStats]);
-
-    const handleProviderChange = (newProvider: AIProvider) => {
-        setProvider(newProvider);
-        setSelectedModel(AI_PROVIDERS[newProvider].defaultModel);
-        // Load saved API key for this provider
-        const savedKey = localStorage.getItem(`${newProvider.toUpperCase()}_API_KEY`) || '';
-        setApiKey(savedKey);
-        setAiConfigured(!!savedKey);
-        setShowProviderDropdown(false);
-    };
-
-    const handleSaveKey = () => {
-        setAIConfig({ 
-            provider, 
-            apiKey, 
-            model: selectedModel 
-        });
-        setAiConfigured(!!apiKey);
-        setIsSaved(true);
-        setTimeout(() => setIsSaved(false), 2000);
-    };
-
-    const providerInfo = AI_PROVIDERS[provider];
+    }, [loadDashboard]);
     const quickSteps = [
         {
             key: 'api',
@@ -136,7 +109,13 @@ export const Home = () => {
         },
     ];
     const completedSteps = quickSteps.filter(step => step.done).length;
-    
+    const storageLabel =
+        storageMode === 'db'
+            ? t('storageModeDb')
+            : storageMode === 'memory'
+                ? t('storageModeMemory')
+                : t('storageModeFallback');
+
 
     return (
         <div className="max-w-6xl mx-auto space-y-12 pb-20">
@@ -154,6 +133,25 @@ export const Home = () => {
                     </div>
                 </div>
             </header>
+
+            <div className="flex flex-wrap items-center gap-3">
+                <Link
+                    to="/settings"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-secondary/20 text-sm font-bold text-foreground hover:bg-secondary/40 transition-colors"
+                >
+                    <Settings2 className="w-4 h-4 text-primary" />
+                    {t('openSettings')}
+                </Link>
+                <span className={cn(
+                    "inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest border",
+                    aiConfigured ? "border-emerald-500/30 text-emerald-500 bg-emerald-500/10" : "border-amber-500/30 text-amber-500 bg-amber-500/10"
+                )}>
+                    {aiConfigured ? t('aiStatusConfigured') : t('aiStatusMissing')}
+                </span>
+                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest border border-border text-muted-foreground">
+                    {t('storageModeLabel')}: {storageLabel}
+                </span>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatWidget 
@@ -176,8 +174,7 @@ export const Home = () => {
                 />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {completedSteps < quickSteps.length && (
+            {completedSteps < quickSteps.length && (
                 <Card className="bg-primary/5 border-primary/10 backdrop-blur-xl rounded-[2rem] overflow-hidden">
                     <CardHeader className="p-8 pb-4">
                         <div className="flex items-center gap-3 mb-2">
@@ -221,191 +218,88 @@ export const Home = () => {
                         </div>
                     </CardContent>
                 </Card>
-                )}
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card className="bg-secondary/20 border-border backdrop-blur-xl rounded-[2rem] overflow-hidden">
                     <CardHeader className="p-8 pb-4">
                         <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-primary/10 text-primary rounded-xl">
-                                <Settings2 className="w-5 h-5" />
+                            <div className="p-2 bg-blue-500/10 text-blue-500 rounded-xl">
+                                <BookOpen className="w-5 h-5" />
                             </div>
-                            <CardTitle className="text-xl font-bold tracking-tight">{t('configuration')}</CardTitle>
+                            <div>
+                                <CardTitle className="text-xl font-black tracking-tight">{t('recentJournalTitle')}</CardTitle>
+                                <CardDescription className="text-muted-foreground font-semibold">
+                                    {t('recentJournalDesc')}
+                                </CardDescription>
+                            </div>
                         </div>
-                        <CardDescription className="font-semibold text-muted-foreground">{t('setupEnv')}</CardDescription>
                     </CardHeader>
-                    <CardContent className="p-8 pt-4 space-y-6">
-                        {/* Provider Selector */}
-                        <div className="space-y-3">
-                            <label className="text-xs font-black uppercase tracking-widest text-muted-foreground pl-1">
-                                AI Provider
-                            </label>
-                            <div className="relative">
-                                <button
-                                    onClick={() => setShowProviderDropdown(!showProviderDropdown)}
-                                    className="w-full flex items-center justify-between h-12 rounded-xl border border-input bg-background/50 px-4 text-sm font-medium hover:bg-background/80 transition-colors"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <Cpu className="w-4 h-4 text-primary" />
-                                        <span>{providerInfo.name}</span>
+                    <CardContent className="p-8 pt-2 space-y-4">
+                        {recentEntries.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">{t('recentJournalEmpty')}</p>
+                        ) : (
+                            <div className="space-y-3">
+                                {recentEntries.map(entry => (
+                                    <div key={entry.id} className="p-4 bg-background/40 rounded-2xl border border-border">
+                                        <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">
+                                            {new Date(entry.timestamp).toLocaleDateString()}
+                                        </div>
+                                        <p className="text-sm font-semibold line-clamp-2">{entry.content}</p>
                                     </div>
-                                    <ChevronDown className={cn(
-                                        "w-4 h-4 text-muted-foreground transition-transform",
-                                        showProviderDropdown && "rotate-180"
-                                    )} />
-                                </button>
-                                <AnimatePresence>
-                                    {showProviderDropdown && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: -5 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -5 }}
-                                            transition={{ duration: 0.1 }}
-                                            className="absolute z-10 w-full mt-2 bg-background border border-border rounded-xl shadow-xl overflow-hidden"
-                                        >
-                                            {(Object.keys(AI_PROVIDERS) as AIProvider[]).map((p) => (
-                                                <button
-                                                    key={p}
-                                                    onClick={() => handleProviderChange(p)}
-                                                    className={cn(
-                                                        "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-secondary transition-colors text-left",
-                                                        p === provider && "bg-primary/10 text-primary"
-                                                    )}
-                                                >
-                                                    <Cpu className="w-4 h-4" />
-                                                    {AI_PROVIDERS[p].name}
-                                                </button>
-                                            ))}
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
+                                ))}
                             </div>
-                        </div>
-
-                        {/* Model Selector */}
-                        <div className="space-y-3">
-                            <label className="text-xs font-black uppercase tracking-widest text-muted-foreground pl-1">
-                                Model
-                            </label>
-                            <div className="relative">
-                                <button
-                                    onClick={() => setShowModelDropdown(!showModelDropdown)}
-                                    className="w-full flex items-center justify-between h-12 rounded-xl border border-input bg-background/50 px-4 text-sm font-medium hover:bg-background/80 transition-colors"
-                                >
-                                    <span className="font-mono text-xs">{selectedModel}</span>
-                                    <ChevronDown className={cn(
-                                        "w-4 h-4 text-muted-foreground transition-transform",
-                                        showModelDropdown && "rotate-180"
-                                    )} />
-                                </button>
-                                <AnimatePresence>
-                                    {showModelDropdown && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: -5 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -5 }}
-                                            transition={{ duration: 0.1 }}
-                                            className="absolute z-10 w-full mt-2 bg-background border border-border rounded-xl shadow-xl overflow-hidden max-h-48 overflow-y-auto"
-                                        >
-                                            {providerInfo.models.map((m) => (
-                                                <button
-                                                    key={m}
-                                                    onClick={() => {
-                                                        setSelectedModel(m);
-                                                        setShowModelDropdown(false);
-                                                    }}
-                                                    className={cn(
-                                                        "w-full px-4 py-3 text-sm font-mono hover:bg-secondary transition-colors text-left",
-                                                        m === selectedModel && "bg-primary/10 text-primary"
-                                                    )}
-                                                >
-                                                    {m}
-                                                </button>
-                                            ))}
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-                        </div>
-
-                        {/* API Key Input */}
-                        <div className="space-y-3">
-                            <label className="text-xs font-black uppercase tracking-widest text-muted-foreground pl-1">
-                                {providerInfo.name} API Key
-                            </label>
-                            <div className="relative group">
-                                <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-hover:text-primary" />
-                                <input
-                                    type="password"
-                                    value={apiKey}
-                                    onChange={(e) => setApiKey(e.target.value)}
-                                    className="w-full flex h-12 rounded-xl border border-input bg-background/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-11 focus:ring-primary/20"
-                                    placeholder={provider === 'gemini' ? 'AIza...' : provider === 'openai' ? 'sk-...' : 'Enter API key...'}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <Button 
-                                onClick={handleSaveKey} 
-                                className="w-full h-12 rounded-xl font-bold tracking-tight transition-all active:scale-[0.98]"
-                            >
-                                <AnimatePresence mode="wait">
-                                    {isSaved ? (
-                                        <motion.div key="saved" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="flex items-center gap-2">
-                                            <CheckCircle2 className="w-4 h-4" />
-                                            {t('saved')}
-                                        </motion.div>
-                                    ) : (
-                                        <motion.div key="save" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="flex items-center gap-2">
-                                            <ShieldCheck className="w-4 h-4" />
-                                            {t('saveKey')}
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </Button>
-                            
-                            <p className="text-xs text-center text-muted-foreground leading-relaxed px-4">
-                                {t('apiKeyNote')}
-                            </p>
-                        </div>
+                        )}
+                        <Button asChild className="h-10 px-4 rounded-xl font-bold">
+                            <Link to="/journal" className="inline-flex items-center gap-2">
+                                {t('openJournal')}
+                                <ChevronRight className="w-4 h-4" />
+                            </Link>
+                        </Button>
                     </CardContent>
                 </Card>
 
-                <Card className="bg-primary/5 border-primary/10 backdrop-blur-xl rounded-[2rem] flex flex-col items-center justify-center p-8 text-center border-dashed border-2">
-                    <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-6 ring-8 ring-primary/5">
-                        <Sparkles className="w-8 h-8" />
-                    </div>
-                    <CardTitle className="text-2xl font-black tracking-tight mb-2">Multi-AI Support</CardTitle>
-                    <p className="text-muted-foreground font-medium mb-6 leading-relaxed max-w-xs">
-                        Choose your preferred AI: Gemini, OpenAI, Claude, or Grok.
-                    </p>
-                    <div className="flex flex-wrap gap-2 justify-center mb-6">
-                        {(Object.keys(AI_PROVIDERS) as AIProvider[]).map((p) => (
-                            <button
-                                key={p}
-                                onClick={() => handleProviderChange(p)}
-                                className={cn(
-                                    "px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition-all hover:scale-105 active:scale-95",
-                                    p === provider 
-                                        ? "bg-primary text-primary-foreground" 
-                                        : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                <Card className="bg-secondary/20 border-border backdrop-blur-xl rounded-[2rem] overflow-hidden">
+                    <CardHeader className="p-8 pb-4">
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-amber-500/10 text-amber-500 rounded-xl">
+                                <Sparkles className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-xl font-black tracking-tight">{t('latestInsightTitle')}</CardTitle>
+                                <CardDescription className="text-muted-foreground font-semibold">
+                                    {t('latestInsightDesc')}
+                                </CardDescription>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-8 pt-2 space-y-4">
+                        {latestInsight ? (
+                            <div className="space-y-4">
+                                <div className="text-lg font-black tracking-tight">
+                                    {latestInsight.archetypes?.[0] || t('latestInsightTitle')}
+                                </div>
+                                {latestInsight.hiddenPatterns?.[0] && (
+                                    <p className="text-sm text-muted-foreground line-clamp-3">
+                                        {latestInsight.hiddenPatterns[0]}
+                                    </p>
                                 )}
-                            >
-                                {AI_PROVIDERS[p].name.split(' ')[0]}
-                            </button>
-                        ))}
-                    </div>
-                    <a 
-                        href={provider === 'gemini' ? 'https://aistudio.google.com/app/apikey' 
-                            : provider === 'openai' ? 'https://platform.openai.com/api-keys'
-                            : provider === 'claude' ? 'https://console.anthropic.com/settings/keys'
-                            : 'https://console.x.ai/'} 
-                        target="_blank" 
-                        rel="noreferrer"
-                        className="text-sm font-bold text-primary hover:underline underline-offset-4 flex items-center gap-1 group"
-                    >
-                        Get {providerInfo.name} API Key
-                        <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                    </a>
+                                {latestInsight.criticalQuestions?.[0] && (
+                                    <p className="text-sm font-semibold italic text-foreground/80 line-clamp-2">
+                                        "{latestInsight.criticalQuestions[0]}"
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-muted-foreground">{t('latestInsightEmpty')}</p>
+                        )}
+                        <Button asChild variant="outline" className="h-10 px-4 rounded-xl font-bold">
+                            <Link to="/profile" className="inline-flex items-center gap-2">
+                                {t('openProfile')}
+                                <ChevronRight className="w-4 h-4" />
+                            </Link>
+                        </Button>
+                    </CardContent>
                 </Card>
             </div>
 

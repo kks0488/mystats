@@ -4,6 +4,7 @@ import {
   BookOpen, 
   Compass, 
   UserCircle2, 
+  Settings,
   ChevronRight,
   Menu,
   X
@@ -50,6 +51,7 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
     { to: '/journal', icon: <BookOpen size={20} />, label: t('navJournal') },
     { to: '/strategy', icon: <Compass size={20} />, label: t('navStrategy') },
     { to: '/profile', icon: <UserCircle2 size={20} />, label: t('navProfile') },
+    { to: '/settings', icon: <Settings size={20} />, label: t('navSettings') },
   ];
 
   return (
