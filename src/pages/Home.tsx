@@ -137,6 +137,7 @@ export const Home = () => {
         },
     ];
     const completedSteps = quickSteps.filter(step => step.done).length;
+    const hasData = stats.entries > 0 || stats.skills > 0 || stats.insights > 0;
     const demoMessage =
         demoStatus === 'seeded' ? t('demoSeeded')
         : demoStatus === 'fallback' ? t('demoSeededFallback')
@@ -206,6 +207,7 @@ export const Home = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {completedSteps < quickSteps.length && (
                 <Card className="bg-primary/5 border-primary/10 backdrop-blur-xl rounded-[2rem] overflow-hidden">
                     <CardHeader className="p-8 pb-4">
                         <div className="flex items-center gap-3 mb-2">
@@ -249,6 +251,8 @@ export const Home = () => {
                         </div>
                     </CardContent>
                 </Card>
+                )}
+                {!hasData && (
                 <Card className="bg-secondary/20 border-border backdrop-blur-xl rounded-[2rem] overflow-hidden">
                     <CardHeader className="p-8 pb-4">
                         <div className="flex items-center gap-3 mb-2">
@@ -276,6 +280,7 @@ export const Home = () => {
                         )}
                     </CardContent>
                 </Card>
+                )}
                 <Card className="bg-secondary/20 border-border backdrop-blur-xl rounded-[2rem] overflow-hidden">
                     <CardHeader className="p-8 pb-4">
                         <div className="flex items-center gap-3 mb-2">
