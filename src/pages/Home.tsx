@@ -5,7 +5,6 @@ import {
   Sparkles,
   ShieldCheck,
   CheckCircle2,
-  Settings2,
   LayoutDashboard,
   Circle,
   ChevronRight,
@@ -134,24 +133,20 @@ export const Home = () => {
                 </div>
             </header>
 
-            <div className="flex flex-wrap items-center gap-3">
-                <Link
-                    to="/settings"
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-secondary/20 text-sm font-bold text-foreground hover:bg-secondary/40 transition-colors"
-                >
-                    <Settings2 className="w-4 h-4 text-primary" />
-                    {t('openSettings')}
-                </Link>
-                <span className={cn(
-                    "inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest border",
-                    aiConfigured ? "border-emerald-500/30 text-emerald-500 bg-emerald-500/10" : "border-amber-500/30 text-amber-500 bg-amber-500/10"
-                )}>
-                    {aiConfigured ? t('aiStatusConfigured') : t('aiStatusMissing')}
-                </span>
-                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest border border-border text-muted-foreground">
-                    {t('storageModeLabel')}: {storageLabel}
-                </span>
-            </div>
+            {(!aiConfigured || storageMode !== 'db') && (
+                <div className="flex flex-wrap items-center gap-3">
+                    {!aiConfigured && (
+                        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest border border-amber-500/30 text-amber-500 bg-amber-500/10">
+                            {t('aiStatusMissing')}
+                        </span>
+                    )}
+                    {storageMode !== 'db' && (
+                        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest border border-amber-500/30 text-amber-500 bg-amber-500/10">
+                            {t('storageModeLabel')}: {storageLabel}
+                        </span>
+                    )}
+                </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatWidget 
