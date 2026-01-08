@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { Shell } from './components/layout/Shell';
 import { LanguageProvider } from './lib/LanguageProvider';
 import { useEffect, Suspense, lazy } from 'react';
-import { migrateData } from './db/db';
+import { migrateData, recoverFromMirror } from './db/db';
 
 const Home = lazy(() => import('./pages/Home').then(module => ({ default: module.Home })));
 const Journal = lazy(() => import('./pages/Journal').then(module => ({ default: module.Journal })));
@@ -15,7 +15,6 @@ function App() {
     const init = async () => {
       try {
         await migrateData();
-        const { recoverFromMirror } = await import('./db/db');
         await recoverFromMirror();
         
         // Demo data seeding removed

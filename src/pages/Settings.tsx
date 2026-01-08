@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
   getAIConfig,
+  getProviderConfig,
   setAIConfig,
   AI_PROVIDERS,
   type AIProvider,
@@ -54,7 +55,7 @@ const normalizeSkillName = (value: string) =>
   value
     .trim()
     .replace(/\s+/g, ' ')
-    .replace(/^[\"'`]+|[\"'`]+$/g, '')
+    .replace(/^["'`]+|["'`]+$/g, '')
     .replace(/[.!?;:]+$/g, '')
     .toLowerCase();
 
@@ -129,10 +130,10 @@ export const Settings = () => {
   }, [refreshStorageMode]);
 
   const handleProviderChange = (newProvider: AIProvider) => {
+    const config = getProviderConfig(newProvider);
     setProvider(newProvider);
-    setSelectedModel(AI_PROVIDERS[newProvider].defaultModel);
-    const savedKey = localStorage.getItem(`${newProvider.toUpperCase()}_API_KEY`) || '';
-    setApiKey(savedKey);
+    setSelectedModel(config.model || AI_PROVIDERS[newProvider].defaultModel);
+    setApiKey(config.apiKey);
     setShowProviderDropdown(false);
   };
 
@@ -149,7 +150,7 @@ export const Settings = () => {
   const handleExport = async () => {
     try {
       setIsExporting(true);
-      let data: Record<string, any[]> = { journal: [], skills: [], solutions: [], insights: [] };
+      let data: Record<string, unknown[]> = { journal: [], skills: [], solutions: [], insights: [] };
       let dbAvailable = true;
       try {
         data = await exportAllData();

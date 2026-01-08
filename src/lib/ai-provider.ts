@@ -50,13 +50,19 @@ const STORAGE_KEYS = {
   model: (provider: AIProvider) => `${provider.toUpperCase()}_MODEL`,
 };
 
+export const getProviderConfig = (provider: AIProvider): AIConfig => {
+  const apiKey =
+    localStorage.getItem(STORAGE_KEYS.apiKey(provider)) ||
+    (provider === 'gemini' ? localStorage.getItem('GEMINI_API_KEY') : '') ||
+    '';
+  const model = localStorage.getItem(STORAGE_KEYS.model(provider)) || AI_PROVIDERS[provider].defaultModel;
+
+  return { provider, apiKey, model };
+};
+
 export const getAIConfig = (): AIConfig => {
   const provider = (localStorage.getItem(STORAGE_KEYS.provider) as AIProvider) || 'gemini';
-  const apiKey = localStorage.getItem(STORAGE_KEYS.apiKey(provider)) || 
-                 localStorage.getItem('GEMINI_API_KEY') || ''; // Backward compatibility
-  const model = localStorage.getItem(STORAGE_KEYS.model(provider)) || AI_PROVIDERS[provider].defaultModel;
-  
-  return { provider, apiKey, model };
+  return getProviderConfig(provider);
 };
 
 export const setAIConfig = (config: Partial<AIConfig>) => {

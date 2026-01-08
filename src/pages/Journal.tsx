@@ -51,7 +51,7 @@ export const Journal = () => {
         value
             .trim()
             .replace(/\s+/g, ' ')
-            .replace(/^[\"'`]+|[\"'`]+$/g, '')
+        .replace(/^["'`]+|["'`]+$/g, '')
             .replace(/[.!?;:]+$/g, '');
 
     const setFallbackNotice = useCallback(() => {
@@ -118,7 +118,7 @@ export const Journal = () => {
                 const refreshed = await db.getAllFromIndex('journal', 'by-date');
                 setHistory(refreshed.reverse());
             }
-        } catch (error) {
+        } catch {
             setHistory(loadFallbackJournalEntries());
             setFallbackNotice();
             setAnalysisError(null);
@@ -169,7 +169,7 @@ export const Journal = () => {
             try {
                 db = await getDB();
                 setDbNotice(null);
-            } catch (error) {
+            } catch {
                 useFallback = true;
                 setAnalysisError(null);
                 setHistory(saveFallbackJournalEntry(entry));

@@ -46,7 +46,7 @@ const normalizeSkillName = (value: string) =>
     value
         .trim()
         .replace(/\s+/g, ' ')
-        .replace(/^[\"'`]+|[\"'`]+$/g, '')
+        .replace(/^["'`]+|["'`]+$/g, '')
         .replace(/[.!?;:]+$/g, '')
         .toLowerCase();
 
