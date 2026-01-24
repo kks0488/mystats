@@ -101,6 +101,9 @@ MyStats can be installed like an app on mobile/desktop via PWA:
 - iOS/Android: add to Home Screen / Install app
 - Offline-friendly app shell caching (data stays local-first)
 
+### ☁️ **Cloud Sync (Beta, Optional)**
+If you sign in, you can sync your data across devices via Supabase.
+
 ---
 
 ## 📘 3-Step Usage Guide
@@ -265,6 +268,7 @@ See `CHANGELOG.md`.
 - **Your API Key**: direct connection to your provider in BYOK mode (we never see it)
 - **memU Embedded**: runs locally in the browser
 - **memU Server (optional)**: in API mode, entries may be sent to your local memU service
+- **Cloud Sync (optional)**: only when you sign in and enable it
 - **Export Anytime**: Download your data as JSON
 
 ---

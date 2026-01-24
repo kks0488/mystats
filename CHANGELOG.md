@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-01-24
+
+### Added
+- **Cloud Sync (Beta)**: optional Supabase Auth + cross-device sync for journals/skills/insights/solutions.
+- **Auto Sync**: background sync on data changes (when enabled).
+- Supabase setup assets: `.env.example`, `docs/CLOUD_SYNC.md`, and SQL migration under `supabase/migrations/`.
+
 ## [1.1.3] - 2026-01-24
 
 ### Added

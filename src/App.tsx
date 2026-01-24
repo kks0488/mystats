@@ -13,6 +13,8 @@ const Settings = lazy(() => import('./pages/Settings').then(module => ({ default
 
 function App() {
   useEffect(() => {
+    let stopCloudSync = () => {};
+
     const init = async () => {
       try {
         await migrateData();
@@ -24,6 +26,35 @@ function App() {
       }
     };
     init();
+
+    const maybeStartCloudSync = () => {
+      const configured = Boolean(
+        import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY
+      );
+      if (!configured) return;
+
+      let enabled = false;
+      try {
+        const raw = localStorage.getItem('MYSTATS_CLOUD_SYNC_CONFIG_V1');
+        if (raw) enabled = Boolean(JSON.parse(raw)?.enabled);
+      } catch {
+        enabled = false;
+      }
+      if (!enabled) return;
+
+      void import('./lib/cloudSyncManager').then(({ startCloudSyncManager }) => {
+        stopCloudSync = startCloudSyncManager();
+      });
+    };
+
+    const onCloudConfig = () => maybeStartCloudSync();
+    window.addEventListener('mystats-cloud-sync-config', onCloudConfig);
+    maybeStartCloudSync();
+
+    return () => {
+      window.removeEventListener('mystats-cloud-sync-config', onCloudConfig);
+      stopCloudSync();
+    };
   }, []);
 
   const pageFallback = (
