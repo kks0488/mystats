@@ -29,6 +29,7 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '../hooks/useLanguage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { getMemuConfig, memuCheckSimilar, memuCreateItem } from '@/lib/memu';
 
 export const Journal = () => {
     const { t, language } = useLanguage();
@@ -207,6 +208,25 @@ export const Journal = () => {
             setContent('');
             if (!useFallback) {
                 loadHistory();
+            }
+
+            const memuConfig = getMemuConfig();
+            if (memuConfig.enabled && memuConfig.engine === 'api' && memuConfig.storeJournal) {
+                const memuContent = `[mystats] type=journal entry_id=${entryId} ts=${new Date(timestamp).toISOString()}\n\n${entryContent}`;
+                void (async () => {
+                    try {
+                        if (memuConfig.dedupeBeforeStore) {
+                            const check = await memuCheckSimilar(memuContent, memuConfig, {
+                                threshold: memuConfig.dedupeThreshold,
+                                timeoutMs: 4000,
+                            });
+                            if (check?.is_similar) return;
+                        }
+                        await memuCreateItem(memuContent, memuConfig, { memoryType: 'journal', timeoutMs: 6000 });
+                    } catch {
+                        // Ignore memU errors (graceful degradation)
+                    }
+                })();
             }
 
             let isAIConfigured = false;

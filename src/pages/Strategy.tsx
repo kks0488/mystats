@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '../hooks/useLanguage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { getMemuConfig, memuRetrieve, type MemuEngine } from '@/lib/memu';
 
 export const Strategy = () => {
     const { t, language } = useLanguage();
@@ -27,12 +28,14 @@ export const Strategy = () => {
     const [solution, setSolution] = useState('');
     const [status, setStatus] = useState<'idle' | 'generating' | 'completed' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [memuRunInfo, setMemuRunInfo] = useState<{ engine: MemuEngine; hits: number; failed: boolean } | null>(null);
 
     const handleGenerate = async () => {
         if (!problem.trim()) return;
         setStatus('generating');
         setSolution('');
         setErrorMessage(null);
+        setMemuRunInfo(null);
 
         try {
             let skills: Skill[] = [];
@@ -78,6 +81,49 @@ export const Strategy = () => {
                 context += `\n\n=== DEEP INTELLIGENCE PROFILES ===\n`;
                 if (archetypes.length) context += `Core Archetypes: ${archetypes.join(', ')}\n`;
                 if (patterns.length) context += `Operational Patterns:\n${patterns.map(p => `- ${p}`).join('\n')}`;
+            }
+
+            const memuConfig = getMemuConfig();
+            if (memuConfig.enabled && memuConfig.useInStrategy) {
+                const engine = memuConfig.engine;
+                let memuHits = 0;
+                let memuFailed = false;
+
+                const memuPersonal = await memuRetrieve(problem, memuConfig, { topK: 4, timeoutMs: 4000 });
+                if (!memuPersonal) memuFailed = true;
+                const personalLines = (memuPersonal?.items || [])
+                    .map((item) => {
+                        const summary = (item.summary || '').replace(/\s+/g, ' ').trim();
+                        const score = typeof item.score === 'number' ? item.score.toFixed(2) : undefined;
+                        const label = score ? `(${score}) ` : '';
+                        return summary ? `- ${label}${summary.slice(0, 240)}` : null;
+                    })
+                    .filter(Boolean) as string[];
+                memuHits += personalLines.length;
+
+                let computedProjectLines: string[] = [];
+                if (memuConfig.includeProjectRegistryInStrategy) {
+                    const memuProjects = await memuRetrieve(problem, memuConfig, { userId: 'project-registry', topK: 3, timeoutMs: 3000 });
+                    if (!memuProjects) memuFailed = true;
+                    computedProjectLines = (memuProjects?.items || [])
+                        .map((item) => {
+                            const summary = (item.summary || '').replace(/\s+/g, ' ').trim();
+                            return summary ? `- ${summary.slice(0, 240)}` : null;
+                        })
+                        .filter(Boolean) as string[];
+                }
+                memuHits += computedProjectLines.length;
+                setMemuRunInfo({ engine, hits: memuHits, failed: memuFailed });
+
+                if (personalLines.length || (computedProjectLines?.length ?? 0)) {
+                    context += `\n\n=== memU CONTEXT ===\n`;
+                    if (personalLines.length) {
+                        context += `Personal Memory:\n${personalLines.join('\n')}\n`;
+                    }
+                    if (computedProjectLines?.length) {
+                        context += `\nProject Registry:\n${computedProjectLines.join('\n')}\n`;
+                    }
+                }
             }
 
             const result = await generateStrategy(context, problem, language);
@@ -187,11 +233,27 @@ export const Strategy = () => {
                                 </div>
                                 <CardTitle className="text-2xl font-black tracking-tight">Strategy Output</CardTitle>
                              </div>
-                             {status === 'completed' && (
-                                <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase">
-                                    Optimized
-                                </Badge>
-                             )}
+                             <div className="flex items-center gap-2">
+                                {memuRunInfo && (
+                                    <Badge
+                                        className={cn(
+                                            "px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase",
+                                            memuRunInfo.failed
+                                                ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                                : "bg-blue-500/10 text-blue-500 border-blue-500/20"
+                                        )}
+                                    >
+                                        {(memuRunInfo.failed ? t('memuContextFailed') : t('memuContextBadge'))
+                                            .replace('{engine}', memuRunInfo.engine === 'embedded' ? t('memuBadgeEmbedded') : t('memuBadgeApi'))
+                                            .replace('{count}', String(memuRunInfo.hits))}
+                                    </Badge>
+                                )}
+                                {status === 'completed' && (
+                                    <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase">
+                                        Optimized
+                                    </Badge>
+                                )}
+                             </div>
                         </CardHeader>
                         
                         <CardContent className="flex-1 overflow-y-auto p-12 custom-scrollbar relative">

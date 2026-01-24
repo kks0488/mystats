@@ -1,16 +1,82 @@
 import path from "path"
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const memuTarget = (
+    process.env.MEMU_API_URL ||
+    env.MEMU_API_URL ||
+    process.env.VITE_MEMU_API_URL ||
+    env.VITE_MEMU_API_URL ||
+    'http://localhost:8100'
+  )
+    .trim()
+    .replace(/\/+$/, '');
+
+  return {
+    plugins: [
+      react(),
+      VitePWA({
+        filename: 'sw.js',
+        registerType: 'autoUpdate',
+        includeAssets: ['logo.svg'],
+        manifest: {
+          name: 'MyStats',
+          short_name: 'MyStats',
+          description: 'AI-Powered Self-Discovery & Career Strategy Engine. Transform your scattered thoughts into actionable intelligence.',
+          theme_color: '#0A84FF',
+          background_color: '#1C1C1E',
+          display: 'standalone',
+          start_url: '/',
+          scope: '/',
+          icons: [
+            {
+              src: '/icons/icon-192.png',
+              sizes: '192x192',
+              type: 'image/png',
+            },
+            {
+              src: '/icons/icon-512.png',
+              sizes: '512x512',
+              type: 'image/png',
+            },
+            {
+              src: '/icons/maskable-192.png',
+              sizes: '192x192',
+              type: 'image/png',
+              purpose: 'maskable',
+            },
+            {
+              src: '/icons/maskable-512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable',
+            },
+          ],
+        },
+        workbox: {
+          navigateFallback: '/index.html',
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest,json,txt,woff2}'],
+        },
+      }),
+    ],
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
     },
-  },
-  server: {
-    port: 5178,
-  }
+    server: {
+      port: 5178,
+      proxy: {
+        '/api/memu': {
+          target: memuTarget,
+          changeOrigin: true,
+          rewrite: (p) => p.replace(/^\/api\/memu/, ''),
+        },
+      },
+    },
+  };
 })
