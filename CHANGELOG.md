@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] - 2026-01-24
+
+### Fixed
+- Cloud Sync sign-in error status messaging.
+
 ## [1.2.0] - 2026-01-24
 
 ### Added

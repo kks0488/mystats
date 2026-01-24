@@ -280,12 +280,15 @@ export const Settings = () => {
   const handleSendCloudLink = useCallback(async () => {
     setCloudMessage(null);
     setCloudLinkSent(false);
+    setCloudStatus('idle');
     const result = await cloudSignInWithEmail(cloudEmail);
     if (result.ok) {
       setCloudLinkSent(true);
+      setCloudStatus('ok');
       setCloudMessage(t('cloudLinkSent'));
       return;
     }
+    setCloudStatus('fail');
     setCloudMessage(result.message || t('cloudSyncFail'));
   }, [cloudEmail, t]);
 
