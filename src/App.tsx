@@ -17,6 +17,10 @@ function App() {
 
     const init = async () => {
       try {
+        if (import.meta.env.VITE_SENTRY_DSN) {
+          const { initSentry } = await import('./lib/sentry');
+          await initSentry();
+        }
         await migrateData();
         await recoverFromMirror();
         

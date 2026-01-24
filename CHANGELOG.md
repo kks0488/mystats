@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.2] - 2026-01-24
+
+### Added
+- Optional Sentry error reporting (`VITE_SENTRY_DSN`) with lazy loading.
+
 ## [1.2.1] - 2026-01-24
 
 ### Fixed
