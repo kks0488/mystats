@@ -72,7 +72,7 @@ export interface MyStatsDB extends DBSchema {
 }
 
 export const DB_NAME = 'mystats-db';
-const DB_VERSION = 8;
+export const DB_VERSION = 8;
 const DB_OPEN_TIMEOUT_MS = 8000;
 export const DB_OP_TIMEOUT_MS = 8000;
 

@@ -140,6 +140,10 @@ const HEALTH_TIMEOUT_MS = 1500;
 const MAX_CONTENT_CHARS = 8000;
 const EMBED_DIM = 512;
 const MIN_TOKEN_LEN = 2;
+const EMBED_CACHE_MAX_ITEMS = 2500;
+
+type EmbeddedVecCacheEntry = { signature: number; vec: Float32Array };
+const embeddedVecCache = new Map<string, EmbeddedVecCacheEntry>();
 
 function isAbortError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
@@ -323,6 +327,31 @@ function cosineSimilarity(a: Float32Array, b: Float32Array): number {
   return sum;
 }
 
+function getEntrySignature(entry: JournalEntry): number {
+  return Number(entry.lastModified ?? entry.timestamp ?? 0);
+}
+
+function cacheSet(key: string, value: EmbeddedVecCacheEntry): void {
+  embeddedVecCache.set(key, value);
+  while (embeddedVecCache.size > EMBED_CACHE_MAX_ITEMS) {
+    const oldestKey = embeddedVecCache.keys().next().value as string | undefined;
+    if (!oldestKey) break;
+    embeddedVecCache.delete(oldestKey);
+  }
+}
+
+function getEntryVec(entry: JournalEntry): Float32Array {
+  const key = entry.id;
+  const signature = getEntrySignature(entry);
+  const existing = embeddedVecCache.get(key);
+  if (existing && existing.signature === signature) {
+    return existing.vec;
+  }
+  const vec = embedText(entry.content);
+  cacheSet(key, { signature, vec });
+  return vec;
+}
+
 async function loadEmbeddedJournalEntries(): Promise<JournalEntry[]> {
   try {
     const db = await getDB();
@@ -354,7 +383,7 @@ async function embeddedRetrieve(
   const qVec = embedText(query);
   const scored: MemuRetrieveItem[] = [];
   for (const entry of entries) {
-    const score = cosineSimilarity(qVec, embedText(entry.content));
+    const score = cosineSimilarity(qVec, getEntryVec(entry));
     scored.push({
       id: entry.id,
       summary: (entry.content || '').slice(0, 2000),
@@ -395,7 +424,7 @@ async function embeddedCheckSimilar(
   const similar: MemuCheckSimilarResponse['similar_items'] = [];
 
   for (const entry of entries) {
-    const score = cosineSimilarity(targetVec, embedText(entry.content));
+    const score = cosineSimilarity(targetVec, getEntryVec(entry));
     if (score > maxScore) maxScore = score;
     if (score >= threshold) {
       similar.push({

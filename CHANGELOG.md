@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.3] - 2026-01-25
+
+### Added
+- Backup export metadata now includes app version + DB schema version.
+- Restore confirmation now uses translations and explains merge behavior.
+
+### Changed
+- Embedded memU now caches per-entry embeddings for faster repeated searches.
+
+### Fixed
+- Import summary now includes solutions.
+
 ## [1.2.2] - 2026-01-24
 
 ### Added

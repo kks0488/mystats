@@ -41,6 +41,7 @@ import {
   importAllData,
   getDB,
   DB_NAME,
+  DB_VERSION,
   type Skill,
   type Insight,
   type JournalEntry,
@@ -354,6 +355,8 @@ export const Settings = () => {
         meta: {
           version: 2,
           exportedAt: new Date().toISOString(),
+          appVersion: __APP_VERSION__,
+          dbVersion: DB_VERSION,
           sources: {
             indexeddb: dbAvailable,
             fallback: includeFallback && hasFallback,
@@ -384,10 +387,11 @@ export const Settings = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Allow importing the same file multiple times by resetting the input value.
+    e.target.value = '';
+
     const confirmImport = window.confirm(
-      language === 'ko'
-        ? '데이터를 복원하시겠습니까? 동일한 ID의 데이터는 덮어씌워집니다.'
-        : 'Are you sure you want to restore data? Existing data with the same IDs will be overwritten.'
+      `${t('importConfirm')}\n\n${t('importMergeNote')}`
     );
     if (!confirmImport) return;
 
@@ -446,7 +450,8 @@ export const Settings = () => {
         const summaryText = t('importSummary')
           .replace('{entries}', String(mergedJournal.length))
           .replace('{skills}', String(mergedSkills.length))
-          .replace('{insights}', String(mergedInsights.length));
+          .replace('{insights}', String(mergedInsights.length))
+          .replace('{solutions}', String(mergedSolutions.length));
 
         try {
           await importAllData({
@@ -456,7 +461,7 @@ export const Settings = () => {
             insights: mergedInsights,
           });
           alert(
-            mergedJournal.length || mergedSkills.length || mergedInsights.length
+            mergedJournal.length || mergedSkills.length || mergedInsights.length || mergedSolutions.length
               ? summaryText
               : t('importEmpty')
           );
@@ -468,7 +473,7 @@ export const Settings = () => {
           replaceFallbackSkills(rawSkills);
           replaceFallbackInsights(rawInsights);
           alert(
-            mergedJournal.length || mergedSkills.length || mergedInsights.length
+            mergedJournal.length || mergedSkills.length || mergedInsights.length || mergedSolutions.length
               ? `${t('importFallbackOnly')}\n${summaryText}`
               : `${t('importFallbackOnly')}\n${t('importEmpty')}`
           );
