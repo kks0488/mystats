@@ -6,6 +6,16 @@ import { VitePWA } from 'vite-plugin-pwa'
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
+  const port = (() => {
+    const raw =
+      process.env.PORT ||
+      env.PORT ||
+      process.env.VITE_PORT ||
+      env.VITE_PORT ||
+      '5178';
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 5178;
+  })();
   const memuTarget = (
     process.env.MEMU_API_URL ||
     env.MEMU_API_URL ||
@@ -17,6 +27,9 @@ export default defineConfig(({ mode }) => {
     .replace(/\/+$/, '');
 
   return {
+    define: {
+      __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '0.0.0'),
+    },
     plugins: [
       react(),
       VitePWA({
@@ -69,7 +82,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      port: 5178,
+      port,
       proxy: {
         '/api/memu': {
           target: memuTarget,

@@ -1,6 +1,6 @@
 {
   "name": "mystats",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "AI-Powered Self-Discovery & Career Strategy Engine. Transform your scattered thoughts into actionable intelligence using Google Gemini.",
   "author": "Kyoungsoo Kim <kks0488@gmail.com>",
   "license": "MIT",
@@ -32,6 +32,8 @@
     "dev": "node node_modules/vite/bin/vite.js",
     "build": "node node_modules/typescript/bin/tsc -b && node node_modules/vite/bin/vite.js build",
     "lint": "node node_modules/eslint/bin/eslint.js .",
+    "test": "node node_modules/vitest/vitest.mjs run",
+    "test:watch": "node node_modules/vitest/vitest.mjs",
     "preview": "node node_modules/vite/bin/vite.js preview"
   },
   "dependencies": {
@@ -56,6 +58,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^24.10.4",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
@@ -65,11 +70,13 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "jsdom": "^27.4.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",
-    "vite-plugin-pwa": "^1.2.0"
+    "vite-plugin-pwa": "^1.2.0",
+    "vitest": "^4.0.18"
   }
 }

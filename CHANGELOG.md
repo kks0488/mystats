@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.2] - 2026-01-24
+
+### Added
+- **CI pipeline** (GitHub Actions): lint + test + build on push/PR.
+- **Unit tests** (Vitest): initial coverage for embedded memU behavior.
+- **Debug report**: copy a sanitized debug snapshot from the crash screen.
+
+### Changed
+- App version is now injected at build time and shown in the UI.
+- Dev server port can be configured via `PORT` / `VITE_PORT` (defaults to `5178`).
+
 ## [1.1.1] - 2026-01-24
 
 ### Added
