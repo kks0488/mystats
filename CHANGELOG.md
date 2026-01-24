@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.4] - 2026-01-25
+
+### Added
+- Helper script to set Cloud Sync env vars on Vercel (`scripts/vercel-set-cloud-sync-env.sh`).
+
+### Docs
+- Clarified that `localhost` Supabase URLs won't work on Vercel.
+
 ## [1.2.3] - 2026-01-25
 
 ### Added

@@ -27,6 +27,7 @@ Create `.env` from `.env.example` and fill:
 For Vercel:
 
 - Project Settings → Environment Variables → add the same `VITE_*` vars
+  - Note: `localhost` / `127.0.0.1` URLs will **not** work on Vercel. Use a hosted Supabase project URL.
 
 ## 4) Use in the app
 
@@ -39,4 +40,3 @@ Settings → **Cloud Sync (Beta)**:
 Notes:
 - API keys are **not synced** (BYOK stays local).
 - Without Cloud Sync, data remains per device/browser.
-
