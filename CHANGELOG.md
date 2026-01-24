@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1] - 2026-01-24
+
+### Added
+- **Chrome launcher extension**: click the toolbar icon to open/focus the MyStats PWA (`chrome-extension/`).
+
 ## [1.1.0] - 2026-01-24
 
 ### Added
@@ -16,4 +21,3 @@ All notable changes to this project will be documented in this file.
 ### Notes
 - Embedded mode is intentionally scoped to the configured `userId` and does not fetch `project-registry` memories.
 - If you already run an external memU server, switch to **Server (API)** in Settings to keep using it.
-

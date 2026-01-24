@@ -145,6 +145,17 @@ Once you have entries, the AI turns them into insight.
 
 > Note: MyStats is local-first. Without cloud sync, your data is stored per device/browser.
 
+## 🧩 Chrome "App" (Toolbar Launcher Extension)
+
+If you want MyStats to behave like a simple Chrome app launcher, you can load the included extension:
+
+1. Open `chrome://extensions`
+2. Enable **Developer mode**
+3. Click **Load unpacked**
+4. Select `mystats/chrome-extension/`
+
+Click the MyStats icon in the toolbar to open (or focus) the PWA.
+
 ---
 
 ## 🚀 Quick Start
