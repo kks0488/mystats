@@ -28,6 +28,8 @@ For Vercel:
 
 - Project Settings → Environment Variables → add the same `VITE_*` vars
   - Note: `localhost` / `127.0.0.1` URLs will **not** work on Vercel. Use a hosted Supabase project URL.
+- Or via CLI:
+  - `MYSTATS_SUPABASE_URL=... MYSTATS_SUPABASE_ANON_KEY=... ./scripts/vercel-set-cloud-sync-env.sh production`
 
 ## 4) Use in the app
 
