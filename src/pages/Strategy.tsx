@@ -327,7 +327,7 @@ export const Strategy = () => {
                                 <span className="flex items-center gap-2"><Zap size={12} className="text-primary" /> Real-time Evolution</span>
                                 <span className="flex items-center gap-2"><MessageSquareQuote size={12} /> Verified Logic</span>
                             </div>
-                            <span className="font-mono opacity-50">v1.1.0-alpha</span>
+                            <span className="font-mono opacity-50">v1.1.0</span>
                         </div>
                     </Card>
                 </div>

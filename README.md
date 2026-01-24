@@ -22,7 +22,9 @@
   <a href="#features"><strong>Features</strong></a> ·
   <a href="#3-step-usage-guide"><strong>3-Step Guide</strong></a> ·
   <a href="#demo"><strong>Demo</strong></a> ·
+  <a href="#install-as-an-app-pwa"><strong>PWA</strong></a> ·
   <a href="#quick-start"><strong>Quick Start</strong></a> ·
+  <a href="#memory-system-memu"><strong>Memory</strong></a> ·
   <a href="#tech-stack"><strong>Tech Stack</strong></a> ·
   <a href="#contributing"><strong>Contributing</strong></a>
 </p>
@@ -67,6 +69,12 @@ Write freely. Our AI doesn't just save — it **decodes**. Every entry is analyz
 - Hidden Archetypes (e.g., "The Architect of Systems" 시스템의 설계자)
 - Critical Questions you should be asking yourself
 
+### 🧠 **memU Memory System (Embedded)**
+MyStats now includes a built-in **memU-compatible memory layer**:
+- **Embedded mode (default)**: runs entirely in the browser (no server required)
+- Uses your **Journal entries as memory** for retrieval + similarity checks
+- Strategy generation can automatically pull relevant memories as extra context
+
 ### 🤖 **Multi-AI Provider Switch**
 Bring your own API key and choose your brain:
 - Gemini
@@ -88,6 +96,11 @@ Describe a problem. Get a **ruthlessly personalized solution**:
 - Concrete Action Plans
 - Personal Blind Spot Warnings
 
+### 📱 **Installable PWA (No App Store Needed)**
+MyStats can be installed like an app on mobile/desktop via PWA:
+- iOS/Android: add to Home Screen / Install app
+- Offline-friendly app shell caching (data stays local-first)
+
 ---
 
 ## 📘 3-Step Usage Guide
@@ -98,6 +111,8 @@ MyStats is **local-first** with no backend.
 - **Setup:** Settings → API Key → Save
 - **Recommended:** Google Gemini (free)
 - **Privacy:** Your key/data stay only in your browser (no servers).
+
+> Optional: Settings → memU Integration → keep **Embedded** to enable local memory retrieval from your journal.
 
 ### 2) Journal Freely
 Write anything in `Journal` (no format required).
@@ -113,11 +128,22 @@ Once you have entries, the AI turns them into insight.
 
 ## 🎬 Demo
 
-<p align="center">
-  <img src="docs/demo.gif" width="800" alt="MyStats Demo" />
-</p>
-
 > **🎮 Try it now:** [https://mystats-eta.vercel.app](https://mystats-eta.vercel.app)
+
+---
+
+## 📲 Install as an App (PWA)
+
+### iOS (Safari)
+1. Open the demo link in Safari
+2. Tap **Share**
+3. Tap **Add to Home Screen**
+
+### Android (Chrome)
+1. Open the demo link in Chrome
+2. Tap **Install app** (or ⋮ menu → Install app)
+
+> Note: MyStats is local-first. Without cloud sync, your data is stored per device/browser.
 
 ---
 
@@ -146,10 +172,28 @@ npm run dev
 ```
 
 ### Setup
-1. Open the app in your browser (`http://localhost:5173`)
+1. Open the app in your browser (check the terminal output; default is `http://localhost:5178`)
 2. Go to the Dashboard
 3. Enter your API Key (Gemini, OpenAI, Claude, or Grok)
 4. Start journaling!
+
+---
+
+## 🧠 Memory System (memU)
+
+MyStats ships with a **memU-compatible memory layer** that improves retrieval and strategy context.
+
+### Embedded (default)
+- Runs fully in the browser — **no server required**
+- Uses your **Journal entries** as the memory store (IndexedDB / fallback local storage)
+- Provides:
+  - `retrieve` (top-K similar memories)
+  - `check-similar` (similarity-based duplicate detection)
+
+### Server (optional)
+If you already run a local `memU` server, you can switch to **Server (API)** in Settings to:
+- Use the memU REST API endpoint
+- Optionally include `project-registry` memories in Strategy
 
 ---
 
@@ -197,11 +241,19 @@ Toggle language in the header.
 
 ---
 
+## 🗒️ Release Notes
+
+See `CHANGELOG.md`.
+
+---
+
 ## 🔒 Privacy First
 
-- **100% Local Storage**: All data stored in IndexedDB on your device
-- **No Server**: No backend, no tracking, no data collection
-- **Your API Key**: Direct connection to your provider (we never see it)
+- **Local-first by default**: Journals/skills/insights are stored in your browser (IndexedDB)
+- **No mandatory backend**: no tracking, no data collection
+- **Your API Key**: direct connection to your provider in BYOK mode (we never see it)
+- **memU Embedded**: runs locally in the browser
+- **memU Server (optional)**: in API mode, entries may be sent to your local memU service
 - **Export Anytime**: Download your data as JSON
 
 ---
