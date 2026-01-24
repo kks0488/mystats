@@ -3,6 +3,7 @@ import { Shell } from './components/layout/Shell';
 import { LanguageProvider } from './lib/LanguageProvider';
 import { useEffect, Suspense, lazy } from 'react';
 import { migrateData, recoverFromMirror } from './db/db';
+import { PwaUpdatePrompt } from './components/PwaUpdatePrompt';
 
 const Home = lazy(() => import('./pages/Home').then(module => ({ default: module.Home })));
 const Journal = lazy(() => import('./pages/Journal').then(module => ({ default: module.Journal })));
@@ -33,6 +34,7 @@ function App() {
 
   return (
     <LanguageProvider>
+      <PwaUpdatePrompt />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Shell><Outlet /></Shell>}>
