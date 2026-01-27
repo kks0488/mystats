@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.5] - 2026-01-27
+
+### Fixed
+- Prevent IndexedDB `VersionError` after an auto-repair schema bump (open the existing DB version).
+
 ## [1.2.4] - 2026-01-25
 
 ### Added

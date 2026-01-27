@@ -117,23 +117,40 @@ const REQUIRED_STORES = ['journal', 'skills', 'solutions', 'insights'] as const;
 const hasAllStores = (db: IDBPDatabase<MyStatsDB>) =>
   REQUIRED_STORES.every(name => db.objectStoreNames.contains(name));
 
+function isVersionError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  return 'name' in error && (error as { name?: unknown }).name === 'VersionError';
+}
+
 export const initDB = async () => {
   await requestPersistence();
   let isBlocked = false;
-  const openPromise = openDB<MyStatsDB>(DB_NAME, DB_VERSION, {
-    upgrade(db, oldVersion) {
-      if (oldVersion < DB_VERSION) {
-        ensureStores(db);
+  const openPromise = (async () => {
+    try {
+      return await openDB<MyStatsDB>(DB_NAME, DB_VERSION, {
+        upgrade(db, oldVersion) {
+          if (oldVersion < DB_VERSION) {
+            ensureStores(db);
+          }
+        },
+        blocked() {
+          isBlocked = true;
+          console.warn('[DB] Open blocked: close other MyStats tabs to finish upgrade.');
+        },
+        terminated() {
+          console.warn('[DB] Connection terminated unexpectedly.');
+        },
+      });
+    } catch (error) {
+      // If the DB was auto-upgraded to a newer version (ex: missing store repair),
+      // opening with a lower version throws a VersionError. Fall back to opening
+      // the existing DB version.
+      if (isVersionError(error)) {
+        return await openDB<MyStatsDB>(DB_NAME);
       }
-    },
-    blocked() {
-      isBlocked = true;
-      console.warn('[DB] Open blocked: close other MyStats tabs to finish upgrade.');
-    },
-    terminated() {
-      console.warn('[DB] Connection terminated unexpectedly.');
-    },
-  });
+      throw error;
+    }
+  })();
 
   const timeoutPromise = new Promise<never>((_, reject) => {
     setTimeout(() => {
@@ -160,7 +177,7 @@ export const initDB = async () => {
  */
 export const updateMirror = async () => {
     try {
-        const db = await openDB(DB_NAME, DB_VERSION);
+        const db = await getDB();
         const insights = await db.getAll('insights');
         const skills = await db.getAll('skills');
         // We only mirror the last 10 insights and all skills (usually small)
@@ -200,15 +217,18 @@ export const recoverFromMirror = async () => {
  * Moves data from 'entries' to 'journal' if needed and fixes timestamps.
  */
 export const migrateData = async () => {
-    const db = await openDB(DB_NAME, DB_VERSION);
-    const storeNames = Array.from(db.objectStoreNames);
+    const db = await getDB();
+    // This migration touches legacy store names (ex: 'entries'), so we intentionally
+    // loosen typings here to avoid blocking compilation.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const legacyDb = db as unknown as IDBPDatabase<any>;
+    const storeNames = Array.from(legacyDb.objectStoreNames);
     
     // 1. Move data from 'entries' to 'journal' if 'entries' exists
     if (storeNames.includes('entries') && storeNames.includes('journal')) {
         try {
-            const tx = db.transaction(['entries', 'journal'], 'readwrite');
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const oldStore = tx.objectStore('entries' as any);
+            const tx = legacyDb.transaction(['entries', 'journal'], 'readwrite');
+            const oldStore = tx.objectStore('entries');
             const newStore = tx.objectStore('journal');
             
             const allData = await oldStore.getAll();
@@ -232,8 +252,7 @@ export const migrateData = async () => {
     const activeStores = ['journal', 'skills', 'insights'].filter(s => storeNames.includes(s));
     if (activeStores.length > 0) {
         try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const tx2 = db.transaction(activeStores as any, 'readwrite');
+            const tx2 = legacyDb.transaction(activeStores, 'readwrite');
             
             if (activeStores.includes('journal')) {
                 const journalStore = tx2.objectStore('journal');
