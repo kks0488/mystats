@@ -1,28 +1,10 @@
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs/promises';
 
-test('journal: can save entry and see it in history', async ({ page }) => {
-  const entryText = `e2e journal ${Date.now()}`;
-
-  await page.goto('/');
-  await page.getByRole('link', { name: 'Journal' }).click();
-  await expect(page.getByRole('heading', { name: 'Journal' })).toBeVisible();
-
-  await page.locator('textarea').fill(entryText);
-  const saveButton = page.getByRole('button', { name: 'Analyze & Save' });
-  await expect(saveButton).toBeEnabled();
-  await saveButton.click();
-
-  await expect(page.locator('.journal-entry-item', { hasText: entryText })).toBeVisible();
-
-  await page.reload();
-  await expect(page.locator('.journal-entry-item', { hasText: entryText })).toBeVisible();
-});
-
-test('backup: export → reset DB → import restores journal entry', async ({ page }, testInfo) => {
+test('backup: legacy `entries` format can be restored', async ({ page }, testInfo) => {
   page.on('dialog', (dialog) => dialog.accept());
 
-  const entryText = `e2e backup ${Date.now()}`;
+  const entryText = `e2e legacy backup ${Date.now()}`;
 
   await page.goto('/');
   await page.getByRole('link', { name: 'Journal' }).click();
@@ -44,16 +26,21 @@ test('backup: export → reset DB → import restores journal entry', async ({ p
   const backupPath = testInfo.outputPath('mystats-backup.json');
   await download.saveAs(backupPath);
 
-  const backupRaw = await fs.readFile(backupPath, 'utf8');
-  const backup = JSON.parse(backupRaw) as Record<string, unknown>;
-  const meta = (backup.meta || {}) as Record<string, unknown>;
-  expect(meta.version).toBe(2);
-  expect(typeof meta.exportedAt).toBe('string');
-  expect(typeof meta.appVersion).toBe('string');
-  expect(typeof meta.dbVersion).toBe('number');
-  expect(Array.isArray(backup.journal)).toBe(true);
-  expect(Array.isArray(backup.skills)).toBe(true);
-  expect(Array.isArray(backup.insights)).toBe(true);
+  const raw = await fs.readFile(backupPath, 'utf8');
+  const backup = JSON.parse(raw) as Record<string, unknown>;
+
+  const legacyBackup: Record<string, unknown> = { ...backup };
+  legacyBackup.entries = legacyBackup.journal;
+  delete legacyBackup.journal;
+
+  if (legacyBackup.fallback && typeof legacyBackup.fallback === 'object') {
+    const fallback = legacyBackup.fallback as Record<string, unknown>;
+    fallback.entries = fallback.journal;
+    delete fallback.journal;
+  }
+
+  const legacyPath = testInfo.outputPath('mystats-legacy-backup.json');
+  await fs.writeFile(legacyPath, JSON.stringify(legacyBackup, null, 2), 'utf8');
 
   const resetButton = page.getByRole('button', { name: 'Reset DB' });
   await resetButton.scrollIntoViewIfNeeded();
@@ -61,7 +48,7 @@ test('backup: export → reset DB → import restores journal entry', async ({ p
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
 
   const fileInput = page.locator('#import-upload');
-  await fileInput.setInputFiles(backupPath);
+  await fileInput.setInputFiles(legacyPath);
 
   await page.getByRole('link', { name: 'Journal' }).click();
   await expect(page.getByRole('heading', { name: 'Journal' })).toBeVisible();

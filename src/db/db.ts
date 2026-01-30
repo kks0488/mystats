@@ -6,9 +6,14 @@ import { z } from 'zod';
 export const JournalEntrySchema = z.object({
   id: z.string().uuid(),
   content: z.string().min(1),
-  timestamp: z.union([z.number(), z.string().transform(v => new Date(v).getTime())]),
+  timestamp: z.union([
+    z.number().finite(),
+    z.string().transform((v) => new Date(v).getTime()).pipe(z.number().finite()),
+  ]),
   type: z.enum(['journal', 'project']),
-  lastModified: z.number().optional()
+  lastModified: z
+    .union([z.number().finite(), z.string().transform((v) => new Date(v).getTime()).pipe(z.number().finite())])
+    .optional(),
 });
 
 export type JournalEntry = z.infer<typeof JournalEntrySchema>;
@@ -18,8 +23,13 @@ export const SkillSchema = z.object({
   name: z.string().min(1),
   category: z.enum(['hard', 'soft', 'experience', 'interest', 'trait', 'strength', 'weakness']),
   sourceEntryIds: z.array(z.string().uuid()).default([]),
-  createdAt: z.number(),
-  lastModified: z.number().optional()
+  createdAt: z.union([
+    z.number().finite(),
+    z.string().transform((v) => new Date(v).getTime()).pipe(z.number().finite()),
+  ]),
+  lastModified: z
+    .union([z.number().finite(), z.string().transform((v) => new Date(v).getTime()).pipe(z.number().finite())])
+    .optional(),
 });
 
 export type Skill = z.infer<typeof SkillSchema>;
@@ -28,8 +38,13 @@ export const SolutionSchema = z.object({
   id: z.string().uuid(),
   problem: z.string().min(1),
   solution: z.string().min(1),
-  timestamp: z.number(),
-  lastModified: z.number().optional()
+  timestamp: z.union([
+    z.number().finite(),
+    z.string().transform((v) => new Date(v).getTime()).pipe(z.number().finite()),
+  ]),
+  lastModified: z
+    .union([z.number().finite(), z.string().transform((v) => new Date(v).getTime()).pipe(z.number().finite())])
+    .optional(),
 });
 
 export type Solution = z.infer<typeof SolutionSchema>;
@@ -42,8 +57,13 @@ export const InsightSchema = z.object({
   archetypes: z.array(z.string()).default([]),
   hiddenPatterns: z.array(z.string()).default([]),
   criticalQuestions: z.array(z.string()).default([]),
-  timestamp: z.number(),
-  lastModified: z.number().optional()
+  timestamp: z.union([
+    z.number().finite(),
+    z.string().transform((v) => new Date(v).getTime()).pipe(z.number().finite()),
+  ]),
+  lastModified: z
+    .union([z.number().finite(), z.string().transform((v) => new Date(v).getTime()).pipe(z.number().finite())])
+    .optional(),
 });
 
 export type Insight = z.infer<typeof InsightSchema>;
@@ -207,6 +227,14 @@ export const recoverFromMirror = async () => {
     if (insightsStr || skillsStr) {
         console.log("[DB] Attempting recovery from mirror...");
         try {
+            const db = await getDB();
+            const [existingInsights, existingSkills] = await Promise.all([
+                db.count('insights'),
+                db.count('skills'),
+            ]);
+            if (existingInsights > 0 || existingSkills > 0) {
+                return false;
+            }
             const insights = insightsStr ? JSON.parse(insightsStr) : [];
             const skills = skillsStr ? JSON.parse(skillsStr) : [];
             await importAllData({ insights, skills, journal: [], solutions: [] });
@@ -328,14 +356,8 @@ export const importAllData = async (data: Record<string, unknown[]>) => {
 
         for (const item of data[storeName]) {
             try {
-                // Fix timestamps for journal if they came in as strings in the backup
-                if (storeName === 'journal' && typeof (item as Record<string, unknown>).timestamp === 'string') {
-                    (item as Record<string, unknown>).timestamp = new Date((item as Record<string, unknown>).timestamp as string).getTime();
-                }
-                
-                // Validate
-                schema.parse(item);
-                await store.put(item as JournalEntry | Skill | Solution | Insight);
+                const parsed = schema.parse(item);
+                await store.put(parsed as JournalEntry | Skill | Solution | Insight);
             } catch (err) {
                 console.error(`Validation failed for item in ${storeName}:`, err, item);
                 // Continue with next item instead of failing entire import

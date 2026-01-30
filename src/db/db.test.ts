@@ -61,6 +61,7 @@ function createFakeDb(options?: { version?: number; stores?: FakeStoreName[] }) 
       done: Promise.resolve(),
     })),
     getAll: vi.fn(async (name: FakeStoreName) => stores[name]),
+    count: vi.fn(async (name: FakeStoreName) => stores[name].length),
   };
 
   return { db, stores, txStores };
@@ -155,6 +156,91 @@ describe('db/importAllData', () => {
     expect(typeof journal0.timestamp).toBe('number');
     expect(Number.isFinite(journal0.timestamp)).toBe(true);
 
+    expect(stores.skills).toHaveLength(1);
+  });
+
+  it('applies schema defaults and normalizes non-journal timestamps', async () => {
+    const { db, stores } = createFakeDb();
+    openDBMock.mockResolvedValue(db);
+
+    await importAllData({
+      journal: [],
+      skills: [
+        {
+          id: '550e8400-e29b-41d4-a716-446655440010',
+          name: 'Skill without sourceEntryIds',
+          category: 'strength',
+          createdAt: '2026-01-02T00:00:00.000Z',
+        },
+      ],
+      solutions: [
+        {
+          id: '550e8400-e29b-41d4-a716-446655440011',
+          problem: 'p',
+          solution: 's',
+          timestamp: '2026-01-03T00:00:00.000Z',
+        },
+      ],
+      insights: [
+        {
+          id: '550e8400-e29b-41d4-a716-446655440012',
+          entryId: '550e8400-e29b-41d4-a716-446655440013',
+          timestamp: '2026-01-04T00:00:00.000Z',
+        },
+      ],
+    });
+
+    expect(stores.skills).toHaveLength(1);
+    const skill0 = stores.skills[0] as { sourceEntryIds?: unknown; createdAt?: unknown };
+    expect(skill0.sourceEntryIds).toEqual([]);
+    expect(typeof skill0.createdAt).toBe('number');
+
+    expect(stores.solutions).toHaveLength(1);
+    const solution0 = stores.solutions[0] as { timestamp?: unknown };
+    expect(typeof solution0.timestamp).toBe('number');
+
+    expect(stores.insights).toHaveLength(1);
+    const insight0 = stores.insights[0] as {
+      timestamp?: unknown;
+      archetypes?: unknown;
+      hiddenPatterns?: unknown;
+      criticalQuestions?: unknown;
+    };
+    expect(typeof insight0.timestamp).toBe('number');
+    expect(insight0.archetypes).toEqual([]);
+    expect(insight0.hiddenPatterns).toEqual([]);
+    expect(insight0.criticalQuestions).toEqual([]);
+  });
+});
+
+describe('db/recoverFromMirror', () => {
+  it('does not overwrite when DB already has data', async () => {
+    const { db, stores } = createFakeDb();
+    openDBMock.mockResolvedValue(db);
+    stores.skills.push({
+      id: '550e8400-e29b-41d4-a716-446655440020',
+      name: 'existing',
+      category: 'strength',
+      sourceEntryIds: [],
+      createdAt: Date.now(),
+    });
+
+    localStorage.setItem(
+      'MYSTATS_MIRROR_SKILLS',
+      JSON.stringify([
+        {
+          id: '550e8400-e29b-41d4-a716-446655440021',
+          name: 'mirror-skill',
+          category: 'strength',
+          sourceEntryIds: [],
+          createdAt: Date.now(),
+        },
+      ])
+    );
+
+    const { recoverFromMirror } = await import('./db');
+    const recovered = await recoverFromMirror();
+    expect(recovered).toBe(false);
     expect(stores.skills).toHaveLength(1);
   });
 });
