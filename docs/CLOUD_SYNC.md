@@ -11,11 +11,14 @@ Run the SQL in `supabase/migrations/20260124210000_mystats_items.sql` inside you
 
 ## 2) Configure redirect URLs (Auth)
 
-If you use email magic links, make sure your Supabase Auth settings allow redirects to:
+Make sure your Supabase Auth settings allow redirects to:
 
 - `http://localhost:5178` (local dev)
 - `https://mystats-eta.vercel.app` (demo)
 - your production domain
+
+If you use OAuth (Google/GitHub), also enable the providers in Supabase:
+- Supabase Dashboard → Authentication → Providers → enable Google / GitHub
 
 ## 3) Configure env vars (Vercel + local)
 
@@ -35,9 +38,8 @@ For Vercel:
 
 Settings → **Cloud Sync (Beta)**:
 
-1. Enter email → send login link
-2. Open the magic link → you are signed in
-3. Enable Cloud Sync → Sync now
+1. Sign in with Google / GitHub **or** Email + Password
+2. Enable Cloud Sync → Sync now
 
 Notes:
 - API keys are **not synced** (BYOK stays local).

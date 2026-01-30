@@ -180,7 +180,7 @@
 구현된 설계: **옵션형 Sync (Beta)**
 - ✅ 기본: 로컬 저장(즉시, 로그인 불필요)
 - ✅ 백그라운드: 데이터 변경 시 자동 동기화 (cloudSyncManager)
-- ✅ Auth: Supabase Auth (이메일 매직링크)
+- ✅ Auth: Supabase Auth (OAuth + Email/Password)
 - ✅ DB: Supabase Postgres (RLS 적용)
 - ✅ SQL 마이그레이션 + 환경변수 설정 스크립트 제공
 - ✅ 설정 가이드: `docs/CLOUD_SYNC.md`

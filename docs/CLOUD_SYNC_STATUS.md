@@ -9,7 +9,7 @@
 
 - 단계 A: **Supabase Cloud 프로젝트 생성** ✅ 완료
 - 단계 B: DB 테이블 + RLS 생성(SQL 실행) ⛔ 진행 불가(막힘)
-- 단계 C: Auth Redirect URL 설정(매직링크) ⛔ 진행 불가(막힘)
+- 단계 C: Auth 설정(리다이렉트 + Provider 활성화) ⛔ 진행 불가(막힘)
 - 단계 D: 로컬 `.env` 연결( `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` ) ⏸ 대기
 - 단계 E: 앱에서 로그인/Sync 테스트 ⏸ 대기
 
@@ -30,13 +30,21 @@
 - 현재 막힘:
   - SQL Editor 진입 불가 또는 Run 시 에러(에러 메시지 미확보)
 
-### 2) Auth Redirect URL 설정 (매직링크)
+### 2) Auth 설정 (Redirect URL + Provider)
 
 - 설정 위치(기대):
   - Supabase Dashboard → **Authentication → URL Configuration**
-- 설정값(키워드, 비밀값 X):
-  - Site URL: `http://localhost:<PORT>`
-  - Additional Redirect URLs: `http://localhost:<PORT>`, `http://127.0.0.1:<PORT>`, (배포 도메인)
+  - Supabase Dashboard → **Authentication → Providers**
+- 설정값(키워드, 비밀값 X / 예시):
+  - Site URL: `https://mystats-eta.vercel.app` (또는 운영 도메인)
+  - Additional Redirect URLs:
+    - `http://localhost:<PORT>`
+    - `http://127.0.0.1:<PORT>`
+    - `https://mystats-eta.vercel.app`
+  - Providers:
+    - Google OAuth: Enabled
+    - GitHub OAuth: Enabled
+    - Email: Enabled (Signup/Password)
 - 현재 막힘:
   - URL Configuration 메뉴 위치/권한/값 형식에서 진행 중단(상세 미확보)
 
@@ -50,14 +58,37 @@
    - `supabase/migrations/20260124210000_mystats_items.sql` 실행
 3. Supabase Auth Redirect URL 설정
    - `http://localhost:<PORT>` / `http://127.0.0.1:<PORT>` 추가
+   - 배포 도메인(예: `https://mystats-eta.vercel.app`) 추가
+   - Provider 활성화(Google/GitHub/Email)
 4. 로컬 `.env` 설정(값은 로컬에만)
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
 5. 앱에서 로그인/연동 검증(계정 스코프)
-   - Settings → Cloud Sync → 이메일 매직링크 로그인
+   - Settings → Cloud Sync → (Google/GitHub 또는 Email+Password) 로그인
    - Enable → Sync now
    - 시크릿 창/다른 브라우저에서 같은 계정으로 로그인 → Sync now → 데이터 내려오는지 확인
    - 다른 이메일(계정 B)로 로그인 → 계정 A 데이터가 보이면 안 됨
+
+---
+
+## 배포 확인(중요) — “옛날 로그인 UI”가 보일 때
+
+증상:
+- Cloud Sync 카드가 여전히 `Send login link`(매직링크) UI로 보임
+
+원인 후보:
+1. **Vercel이 최신 커밋이 아닌 “Redeploy of …” 스냅샷을 계속 프로덕션으로 쓰는 경우**
+2. PWA(Service Worker) 캐시가 아직 새 버전을 활성화하지 못한 경우
+
+빠른 판별(가장 확실):
+- `view-source:https://mystats-eta.vercel.app/`에서 `assets/index-*.js` 파일명을 확인하고,
+  해당 JS 안에 아래 중 무엇이 있는지 확인한다.
+  - 옛 버전: `cloudSendLink`
+  - 새 버전: `cloudSignInGoogle` / `cloudSignInGithub`
+
+PWA 캐시 리프레시(브라우저):
+- 시크릿 창에서 먼저 확인(캐시/서비스워커 영향 최소)
+- 또는 DevTools → Application → Service Workers → Unregister → 새로고침
 
 ---
 
