@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.7] - 2026-01-30
+
+### Changed
+- Cloud Sync auth UI now supports **Google/GitHub OAuth** and **Email + Password** (replaces magic-link-only flow).
+
+### Fixed
+- Persist Supabase OAuth sessions reliably after redirect by returning to `/settings` and initializing Supabase early so `#access_token=...` is processed before routing clears it.
+- Remove auth fragments from the URL after processing to avoid leaking tokens via copy/paste.
+
+### Docs
+- Added Vercel deployment debugging notes + a small script to detect whether production serves the “old vs new” Cloud Sync bundle.
+
 ## [1.2.6] - 2026-01-29
 
 ### Added

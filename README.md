@@ -104,6 +104,15 @@ MyStats can be installed like an app on mobile/desktop via PWA:
 ### ☁️ **Cloud Sync (Beta, Optional)**
 If you sign in, you can sync your data across devices via Supabase.
 
+Current sign-in methods:
+- Google OAuth
+- GitHub OAuth
+- Email + Password
+
+Notes:
+- After OAuth redirect, the app processes the session and removes any auth tokens from the URL.
+- You must configure Supabase redirect URLs to allow your local and deployed domains (see `docs/CLOUD_SYNC.md`).
+
 ---
 
 ## 📘 3-Step Usage Guide
