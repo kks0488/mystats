@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/hooks/useLanguage';
 import { normalizeSkillName } from '@/lib/utils';
 import { DB_NAME, DB_VERSION, exportAllData, importAllData, updateMirror, type Insight, type JournalEntry, type Skill } from '@/db/db';
+import { hasAnyFallbackCollections, mergeById, parseBackupPayload } from '@/lib/backup';
 import {
   loadFallbackInsights,
   loadFallbackJournalEntries,
@@ -13,16 +14,6 @@ import {
   replaceFallbackJournalEntries,
   replaceFallbackSkills,
 } from '@/db/fallback';
-
-const mergeById = <T extends { id?: string }>(items: T[]) => {
-  const map = new Map<string, T>();
-  for (const item of items) {
-    const id = item?.id;
-    if (typeof id !== 'string' || !id.trim()) continue;
-    map.set(id, item);
-  }
-  return Array.from(map.values());
-};
 
 const mergeSkillsByName = (items: Skill[]): Skill[] => {
   const map = new Map<string, { skill: Skill; sourceIds: Set<string> }>();
@@ -84,13 +75,16 @@ export function DataManagementCard({ onRefreshStorageMode }: { onRefreshStorageM
       } catch (err) {
         console.warn('Export failed from DB, falling back', err);
         dbAvailable = false;
+        void import('@/lib/sentry').then(({ captureException }) =>
+          captureException(err, { phase: 'backup_export', dbAvailable })
+        );
       }
       const fallback = {
         journal: loadFallbackJournalEntries(),
         skills: loadFallbackSkills(),
         insights: loadFallbackInsights(),
       };
-      const hasFallback = fallback.journal.length > 0 || fallback.skills.length > 0 || fallback.insights.length > 0;
+      const hasFallback = hasAnyFallbackCollections(fallback);
       let includeFallback = hasFallback;
 
       if (!dbAvailable) {
@@ -132,6 +126,9 @@ export function DataManagementCard({ onRefreshStorageMode }: { onRefreshStorageM
       void onRefreshStorageMode();
     } catch (err) {
       console.error('Export failed:', err);
+      void import('@/lib/sentry').then(({ captureException }) =>
+        captureException(err, { phase: 'backup_export' })
+      );
       alert('Export failed');
     } finally {
       setIsExporting(false);
@@ -152,37 +149,24 @@ export function DataManagementCard({ onRefreshStorageMode }: { onRefreshStorageM
       const reader = new FileReader();
       reader.onload = async (event) => {
         try {
-          const raw = JSON.parse(event.target?.result as string);
-          const data = raw && typeof raw === 'object' ? raw : {};
-          const baseData = {
-            journal: Array.isArray(data.journal) ? data.journal : Array.isArray(data.entries) ? data.entries : [],
-            skills: Array.isArray(data.skills) ? data.skills : [],
-            solutions: Array.isArray(data.solutions) ? data.solutions : [],
-            insights: Array.isArray(data.insights) ? data.insights : [],
-          };
-          const fallbackData =
-            data.fallback && typeof data.fallback === 'object'
-              ? {
-                  journal: Array.isArray(data.fallback.journal)
-                    ? data.fallback.journal
-                    : Array.isArray(data.fallback.entries)
-                      ? data.fallback.entries
-                      : [],
-                  skills: Array.isArray(data.fallback.skills) ? data.fallback.skills : [],
-                  insights: Array.isArray(data.fallback.insights) ? data.fallback.insights : [],
-                }
-              : { journal: [], skills: [], insights: [] };
-          const hasFallback =
-            fallbackData.journal.length > 0 || fallbackData.skills.length > 0 || fallbackData.insights.length > 0;
+          const raw = JSON.parse(event.target?.result as string) as unknown;
+          const parsed = parseBackupPayload(raw);
+          const baseData = parsed.base;
+          const fallbackData = parsed.fallback;
+          const hasFallback = hasAnyFallbackCollections(fallbackData);
 
           let includeFallback = hasFallback;
           if (hasFallback) {
             includeFallback = window.confirm(t('importFallbackWarning'));
           }
 
-          const selectedJournal = (includeFallback ? [...baseData.journal, ...fallbackData.journal] : [...baseData.journal]) as JournalEntry[];
+          const selectedJournal = (includeFallback
+            ? [...baseData.journal, ...fallbackData.journal]
+            : [...baseData.journal]) as JournalEntry[];
           const selectedSkills = (includeFallback ? [...baseData.skills, ...fallbackData.skills] : [...baseData.skills]) as Skill[];
-          const selectedInsights = (includeFallback ? [...baseData.insights, ...fallbackData.insights] : [...baseData.insights]) as Insight[];
+          const selectedInsights = (includeFallback
+            ? [...baseData.insights, ...fallbackData.insights]
+            : [...baseData.insights]) as Insight[];
 
           const rawJournal = selectedJournal;
           const rawSkills = selectedSkills;
@@ -215,6 +199,9 @@ export function DataManagementCard({ onRefreshStorageMode }: { onRefreshStorageM
             window.dispatchEvent(new Event('mystats-data-updated'));
           } catch (err) {
             console.warn('DB import failed. Saving to fallback only.', err);
+            void import('@/lib/sentry').then(({ captureException }) =>
+              captureException(err, { phase: 'backup_import', mode: 'fallback_only' })
+            );
             replaceFallbackJournalEntries(rawJournal);
             replaceFallbackSkills(rawSkills);
             replaceFallbackInsights(rawInsights);
@@ -228,6 +215,9 @@ export function DataManagementCard({ onRefreshStorageMode }: { onRefreshStorageM
           }
         } catch (err) {
           console.error('Import failed:', err);
+          void import('@/lib/sentry').then(({ captureException }) =>
+            captureException(err, { phase: 'backup_import', mode: 'parse_failed' })
+          );
           alert(language === 'ko' ? '파일 형식이 올바르지 않습니다.' : 'Invalid file format.');
         }
       };
@@ -258,16 +248,25 @@ export function DataManagementCard({ onRefreshStorageMode }: { onRefreshStorageM
         setIsResettingDb(false);
         setResetMessage(t('dbResetFailed'));
         setTimeout(() => setResetMessage(null), 6000);
+        void import('@/lib/sentry').then(({ captureException }) =>
+          captureException(req.error ?? new Error('indexedDB.deleteDatabase failed'), { phase: 'db_reset', reason: 'error' })
+        );
       };
       req.onblocked = () => {
         setIsResettingDb(false);
         setResetMessage(t('dbResetBlocked'));
         setTimeout(() => setResetMessage(null), 6000);
+        void import('@/lib/sentry').then(({ captureException }) =>
+          captureException(new Error('indexedDB.deleteDatabase blocked'), { phase: 'db_reset', reason: 'blocked' })
+        );
       };
     } catch {
       setIsResettingDb(false);
       setResetMessage(t('dbResetFailed'));
       setTimeout(() => setResetMessage(null), 6000);
+      void import('@/lib/sentry').then(({ captureException }) =>
+        captureException(new Error('indexedDB.deleteDatabase threw'), { phase: 'db_reset', reason: 'exception' })
+      );
     }
   }, [t]);
 
@@ -282,6 +281,9 @@ export function DataManagementCard({ onRefreshStorageMode }: { onRefreshStorageM
     } catch (error) {
       setMirrorMessage(language === 'ko' ? '미러 재생성에 실패했습니다.' : 'Failed to rebuild mirror cache.');
       console.warn('Mirror rebuild failed', error);
+      void import('@/lib/sentry').then(({ captureException }) =>
+        captureException(error, { phase: 'mirror_rebuild' })
+      );
     } finally {
       setIsRebuildingMirror(false);
     }

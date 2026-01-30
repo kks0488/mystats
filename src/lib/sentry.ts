@@ -36,6 +36,10 @@ export async function captureException(error: unknown, context?: Record<string, 
 
   Sentry.withScope((scope) => {
     if (debugReport) scope.setContext('app_debug', debugReport);
+    const phase = context?.phase;
+    if (typeof phase === 'string' && phase.trim()) scope.setTag('phase', phase);
+    const reason = context?.reason;
+    if (typeof reason === 'string' && reason.trim()) scope.setTag('reason', reason);
     if (context && Object.keys(context).length) {
       for (const [key, value] of Object.entries(context)) {
         scope.setExtra(key, value);

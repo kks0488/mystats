@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import fs from 'node:fs/promises';
 
 test('journal: can save entry and see it in history', async ({ page }) => {
   const entryText = `e2e journal ${Date.now()}`;
@@ -39,6 +40,17 @@ test('backup: export → reset DB → import restores journal entry', async ({ p
   const backupPath = testInfo.outputPath('mystats-backup.json');
   await download.saveAs(backupPath);
 
+  const backupRaw = await fs.readFile(backupPath, 'utf8');
+  const backup = JSON.parse(backupRaw) as Record<string, unknown>;
+  const meta = (backup.meta || {}) as Record<string, unknown>;
+  expect(meta.version).toBe(2);
+  expect(typeof meta.exportedAt).toBe('string');
+  expect(typeof meta.appVersion).toBe('string');
+  expect(typeof meta.dbVersion).toBe('number');
+  expect(Array.isArray(backup.journal)).toBe(true);
+  expect(Array.isArray(backup.skills)).toBe(true);
+  expect(Array.isArray(backup.insights)).toBe(true);
+
   const resetButton = page.getByRole('button', { name: 'Reset DB' });
   await resetButton.scrollIntoViewIfNeeded();
   await resetButton.click();
@@ -51,4 +63,3 @@ test('backup: export → reset DB → import restores journal entry', async ({ p
   await expect(page.getByRole('heading', { name: 'Journal' })).toBeVisible();
   await expect(page.locator('.journal-entry-item', { hasText: entryText })).toBeVisible();
 });
-
