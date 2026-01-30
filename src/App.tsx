@@ -27,6 +27,11 @@ function App() {
         // Demo data seeding removed
       } catch (err) {
         console.error("Initialization failed:", err);
+        if (import.meta.env.VITE_SENTRY_DSN) {
+          void import('./lib/sentry').then(({ captureException }) =>
+            captureException(err, { phase: 'app_init' })
+          );
+        }
       }
     };
     init();

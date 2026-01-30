@@ -1,7 +1,7 @@
 import { Component, type ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getDebugReportText } from '@/lib/debug';
+import { buildDebugReport, getDebugReportText } from '@/lib/debug';
 
 interface Props {
   children: ReactNode;
@@ -29,6 +29,7 @@ export class ErrorBoundary extends Component<Props, State> {
       void import('@/lib/sentry').then(({ captureException }) =>
         captureException(error, {
           componentStack: errorInfo.componentStack,
+          debugReport: buildDebugReport(),
         })
       );
     }

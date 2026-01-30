@@ -91,5 +91,23 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return;
+            if (id.includes('@supabase/')) return 'supabase';
+            if (id.includes('@sentry/')) return 'sentry';
+            if (id.includes('react-router')) return 'react-router';
+            if (id.includes('react-dom') || id.includes('/react/')) return 'react';
+            if (id.includes('framer-motion')) return 'motion';
+            if (id.includes('lucide-react')) return 'icons';
+            if (id.includes('zod')) return 'zod';
+            if (id.includes('idb')) return 'idb';
+            return 'vendor';
+          },
+        },
+      },
+    },
   };
 })

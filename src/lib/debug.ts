@@ -10,6 +10,23 @@ function safeLocalStorageGet(key: string): string | null {
   }
 }
 
+function safeLocalStorageGetNumber(key: string): number | null {
+  const raw = safeLocalStorageGet(key);
+  if (!raw) return null;
+  const value = Number(raw);
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function safeParseJson(raw: string | null): Record<string, unknown> | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function buildDebugReport(): Record<string, unknown> {
   const ai = (() => {
     try {
@@ -51,6 +68,16 @@ export function buildDebugReport(): Record<string, unknown> {
     }
   })();
 
+  const cloudSync = (() => {
+    const raw = safeLocalStorageGet('MYSTATS_CLOUD_SYNC_CONFIG_V1');
+    const parsed = safeParseJson(raw);
+    return {
+      enabled: parsed ? Boolean(parsed.enabled) : false,
+      autoSync: parsed && 'autoSync' in parsed ? Boolean(parsed.autoSync) : true,
+      lastSyncedAt: safeLocalStorageGetNumber('MYSTATS_CLOUD_SYNC_LAST_SYNC_V1'),
+    };
+  })();
+
   return {
     generatedAt: new Date().toISOString(),
     appVersion: __APP_VERSION__,
@@ -60,10 +87,10 @@ export function buildDebugReport(): Record<string, unknown> {
     ai,
     memu,
     storage,
+    cloudSync,
   };
 }
 
 export function getDebugReportText(): string {
   return JSON.stringify(buildDebugReport(), null, 2);
 }
-
