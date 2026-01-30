@@ -172,7 +172,9 @@ export async function cloudSignInWithOAuth(
   const { error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
-      redirectTo: window.location.origin,
+      // Important: return directly to a route that mounts Cloud Sync UI, so the app
+      // can process `#access_token=...` before React Router navigation clears it.
+      redirectTo: `${window.location.origin}/settings`,
     },
   });
   if (error) return { ok: false, message: error.message };
@@ -213,7 +215,7 @@ export async function cloudSignUpWithPassword(
     email: trimmedEmail,
     password: trimmedPassword,
     options: {
-      emailRedirectTo: window.location.origin,
+      emailRedirectTo: `${window.location.origin}/settings`,
     },
   });
   if (error) return { ok: false, message: error.message };

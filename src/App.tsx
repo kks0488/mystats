@@ -4,6 +4,7 @@ import { LanguageProvider } from './lib/LanguageProvider';
 import { useEffect, Suspense, lazy } from 'react';
 import { migrateData, recoverFromMirror } from './db/db';
 import { PwaUpdatePrompt } from './components/PwaUpdatePrompt';
+import { getSupabaseClient } from './lib/supabase';
 
 const Home = lazy(() => import('./pages/Home').then(module => ({ default: module.Home })));
 const Journal = lazy(() => import('./pages/Journal').then(module => ({ default: module.Journal })));
@@ -23,6 +24,27 @@ function App() {
         }
         await migrateData();
         await recoverFromMirror();
+
+        // Initialize Supabase early so OAuth callbacks like `#access_token=...` are processed
+        // before the router clears the URL hash (common when navigating after redirect).
+        const configured = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
+        if (configured) {
+          const supabase = getSupabaseClient();
+          const hash = window.location.hash || '';
+          const looksLikeAuthFragment = /access_token=|refresh_token=|provider_token=|expires_in=|token_type=/.test(hash);
+          if (supabase && looksLikeAuthFragment) {
+            void supabase.auth
+              .getSession()
+              .catch(() => null)
+              .finally(() => {
+                try {
+                  window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
+                } catch {
+                  // ignore
+                }
+              });
+          }
+        }
         
         // Demo data seeding removed
       } catch (err) {
