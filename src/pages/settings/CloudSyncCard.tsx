@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Cloud } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/hooks/useLanguage';
 import { cn } from '@/lib/utils';
 import {
-  cloudSignInWithEmail,
+  cloudSignInWithOAuth,
+  cloudSignInWithPassword,
   cloudSignOut,
+  cloudSignUpWithPassword,
   getCloudLastSyncedAt,
   getCloudSyncConfig,
   getCloudUserEmail,
@@ -19,13 +21,18 @@ export function CloudSyncCard() {
   const { t } = useLanguage();
   const [cloudConfigured, setCloudConfigured] = useState(false);
   const [cloudEmail, setCloudEmail] = useState('');
+  const [cloudPassword, setCloudPassword] = useState('');
   const [cloudUserEmail, setCloudUserEmail] = useState<string | null>(null);
   const [cloudEnabled, setCloudEnabled] = useState(false);
   const [cloudAutoSync, setCloudAutoSync] = useState(true);
   const [cloudLastSyncedAt, setCloudLastSyncedAt] = useState<number | null>(null);
   const [cloudStatus, setCloudStatus] = useState<'idle' | 'syncing' | 'ok' | 'fail'>('idle');
   const [cloudMessage, setCloudMessage] = useState<string | null>(null);
-  const [cloudLinkSent, setCloudLinkSent] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+
+  const canSubmitPassword = useMemo(() => {
+    return Boolean(cloudEmail.trim() && cloudPassword);
+  }, [cloudEmail, cloudPassword]);
 
   useEffect(() => {
     setCloudConfigured(isSupabaseConfigured());
@@ -41,27 +48,58 @@ export function CloudSyncCard() {
     const { data } =
       supabase?.auth.onAuthStateChange((_event, session) => {
         setCloudUserEmail(session?.user?.email ?? null);
-        setCloudLinkSent(false);
+        setAuthLoading(false);
       }) ?? { data: null };
     return () => {
       data?.subscription?.unsubscribe();
     };
   }, []);
 
-  const handleSendCloudLink = useCallback(async () => {
+  const handleOAuthSignIn = useCallback(
+    async (provider: 'google' | 'github') => {
+      setCloudMessage(null);
+      setCloudStatus('idle');
+      setAuthLoading(true);
+      const result = await cloudSignInWithOAuth(provider);
+      if (!result.ok) {
+        setAuthLoading(false);
+        setCloudStatus('fail');
+        setCloudMessage(result.message || t('cloudSyncFail'));
+      }
+    },
+    [t]
+  );
+
+  const handlePasswordSignIn = useCallback(async () => {
+    if (!canSubmitPassword) return;
     setCloudMessage(null);
-    setCloudLinkSent(false);
     setCloudStatus('idle');
-    const result = await cloudSignInWithEmail(cloudEmail);
+    setAuthLoading(true);
+    const result = await cloudSignInWithPassword(cloudEmail, cloudPassword);
+    setAuthLoading(false);
     if (result.ok) {
-      setCloudLinkSent(true);
       setCloudStatus('ok');
-      setCloudMessage(t('cloudLinkSent'));
       return;
     }
     setCloudStatus('fail');
     setCloudMessage(result.message || t('cloudSyncFail'));
-  }, [cloudEmail, t]);
+  }, [canSubmitPassword, cloudEmail, cloudPassword, t]);
+
+  const handlePasswordSignUp = useCallback(async () => {
+    if (!canSubmitPassword) return;
+    setCloudMessage(null);
+    setCloudStatus('idle');
+    setAuthLoading(true);
+    const result = await cloudSignUpWithPassword(cloudEmail, cloudPassword);
+    setAuthLoading(false);
+    if (result.ok) {
+      setCloudStatus('ok');
+      setCloudMessage(t('cloudSignUpSuccess'));
+      return;
+    }
+    setCloudStatus('fail');
+    setCloudMessage(result.message || t('cloudSyncFail'));
+  }, [canSubmitPassword, cloudEmail, cloudPassword, t]);
 
   const handleCloudSignOut = useCallback(async () => {
     setCloudMessage(null);
@@ -168,6 +206,32 @@ export function CloudSyncCard() {
               </div>
             ) : (
               <div className="space-y-3">
+                <div className="space-y-3">
+                  <Button
+                    onClick={() => handleOAuthSignIn('google')}
+                    disabled={authLoading}
+                    className="w-full h-12 rounded-xl font-bold tracking-tight"
+                  >
+                    {t('cloudSignInGoogle')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleOAuthSignIn('github')}
+                    disabled={authLoading}
+                    className="w-full h-12 rounded-xl font-bold tracking-tight"
+                  >
+                    {t('cloudSignInGithub')}
+                  </Button>
+                </div>
+
+                <div className="flex items-center gap-3 py-2">
+                  <div className="h-px flex-1 bg-border" />
+                  <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                    {t('cloudOrDivider')}
+                  </div>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+
                 <div className="space-y-2">
                   <label htmlFor="cloud-email" className="text-xs font-black uppercase tracking-widest text-muted-foreground pl-1">
                     {t('cloudEmail')}
@@ -178,12 +242,42 @@ export function CloudSyncCard() {
                     onChange={(e) => setCloudEmail(e.target.value)}
                     className="w-full flex h-12 rounded-xl border border-input bg-background/50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     placeholder={t('cloudEmailPlaceholder')}
+                    autoComplete="email"
                   />
                 </div>
-                <Button onClick={handleSendCloudLink} className="w-full h-12 rounded-xl font-bold tracking-tight">
-                  {t('cloudSendLink')}
-                </Button>
-                {cloudLinkSent && <p className="text-xs text-muted-foreground">{t('cloudLinkSent')}</p>}
+
+                <div className="space-y-2">
+                  <label htmlFor="cloud-password" className="text-xs font-black uppercase tracking-widest text-muted-foreground pl-1">
+                    {t('cloudPassword')}
+                  </label>
+                  <input
+                    id="cloud-password"
+                    type="password"
+                    value={cloudPassword}
+                    onChange={(e) => setCloudPassword(e.target.value)}
+                    className="w-full flex h-12 rounded-xl border border-input bg-background/50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    placeholder={t('cloudPasswordPlaceholder')}
+                    autoComplete="current-password"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    onClick={handlePasswordSignIn}
+                    disabled={authLoading || !canSubmitPassword}
+                    className="w-full h-12 rounded-xl font-bold tracking-tight"
+                  >
+                    {t('cloudSignIn')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handlePasswordSignUp}
+                    disabled={authLoading || !canSubmitPassword}
+                    className="w-full h-12 rounded-xl font-bold tracking-tight"
+                  >
+                    {t('cloudSignUp')}
+                  </Button>
+                </div>
               </div>
             )}
 

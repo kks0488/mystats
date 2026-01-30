@@ -163,14 +163,55 @@ function applyRemoteToFallback(
   replaceFallbackInsights([...current.insights, ...updates.insights]);
 }
 
-export async function cloudSignInWithEmail(email: string): Promise<{ ok: boolean; message?: string }> {
+export async function cloudSignInWithOAuth(
+  provider: 'google' | 'github'
+): Promise<{ ok: boolean; message?: string }> {
   const supabase = getSupabaseClient();
   if (!supabase) return { ok: false, message: 'Supabase is not configured.' };
-  const trimmed = (email || '').trim();
-  if (!trimmed) return { ok: false, message: 'Email required.' };
 
-  const { error } = await supabase.auth.signInWithOtp({
-    email: trimmed,
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: window.location.origin,
+    },
+  });
+  if (error) return { ok: false, message: error.message };
+  return { ok: true };
+}
+
+export async function cloudSignInWithPassword(
+  email: string,
+  password: string
+): Promise<{ ok: boolean; message?: string }> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return { ok: false, message: 'Supabase is not configured.' };
+  const trimmedEmail = (email || '').trim();
+  const trimmedPassword = password || '';
+  if (!trimmedEmail) return { ok: false, message: 'Email required.' };
+  if (!trimmedPassword) return { ok: false, message: 'Password required.' };
+
+  const { error } = await supabase.auth.signInWithPassword({
+    email: trimmedEmail,
+    password: trimmedPassword,
+  });
+  if (error) return { ok: false, message: error.message };
+  return { ok: true };
+}
+
+export async function cloudSignUpWithPassword(
+  email: string,
+  password: string
+): Promise<{ ok: boolean; message?: string }> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return { ok: false, message: 'Supabase is not configured.' };
+  const trimmedEmail = (email || '').trim();
+  const trimmedPassword = password || '';
+  if (!trimmedEmail) return { ok: false, message: 'Email required.' };
+  if (!trimmedPassword) return { ok: false, message: 'Password required.' };
+
+  const { error } = await supabase.auth.signUp({
+    email: trimmedEmail,
+    password: trimmedPassword,
     options: {
       emailRedirectTo: window.location.origin,
     },

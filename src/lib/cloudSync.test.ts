@@ -124,7 +124,10 @@ describe('syncNow', () => {
 
     // Upserts are scoped to user_id and use the expected conflict key.
     expect(upsertSpy).toHaveBeenCalledTimes(1);
-    const [rowsArg, optsArg] = upsertSpy.mock.calls[0] ?? [];
+    const call = (upsertSpy as unknown as { mock: { calls: unknown[][] } }).mock.calls[0];
+    expect(call).toBeTruthy();
+    const rowsArg = (call?.[0]) as unknown;
+    const optsArg = (call?.[1]) as unknown;
     expect(optsArg).toEqual({ onConflict: 'user_id,kind,id' });
     expect(Array.isArray(rowsArg)).toBe(true);
     for (const row of rowsArg as Array<Record<string, unknown>>) {
