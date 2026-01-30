@@ -9,7 +9,16 @@ vi.mock('../db/fallback', () => ({
 }));
 
 import { getDB } from '../db/db';
-import { memuCheckSimilar, memuCreateItem, memuHealth, memuRetrieve, type MemuConfig } from './memu';
+import {
+  memuCheckSimilar,
+  memuCreateItem,
+  memuHealth,
+  memuRetrieve,
+  memuRetrieveV3,
+  memuMemorize,
+  memuCategories,
+  type MemuConfig,
+} from './memu';
 
 const baseConfig: MemuConfig = {
   enabled: true,
@@ -85,6 +94,48 @@ describe('memU (embedded engine)', () => {
 
   it('createItem is a no-op in embedded mode', async () => {
     await expect(memuCreateItem('anything', baseConfig)).resolves.toBeNull();
+  });
+
+  it('memuRetrieveV3 falls through to embedded retrieve', async () => {
+    const now = Date.now();
+    const entries = [
+      { id: 'x', content: 'test query match', timestamp: now, type: 'journal', lastModified: now },
+    ];
+    mockedGetDB.mockResolvedValue({
+      getAll: vi.fn(async () => entries),
+    } as unknown as Awaited<ReturnType<typeof getDB>>);
+
+    const res = await memuRetrieveV3('test query match', baseConfig, { topK: 1, method: 'rag' });
+    expect(res?.success).toBe(true);
+    expect(res?.items).toHaveLength(1);
+    expect(res?.items[0]?.id).toBe('x');
+  });
+});
+
+describe('memU v3 API (api engine)', () => {
+  const apiConfig: MemuConfig = { ...baseConfig, engine: 'api' };
+
+  it('memuMemorize returns null when engine is embedded', async () => {
+    const result = await memuMemorize([{ role: 'user', content: 'test' }], baseConfig);
+    expect(result).toBeNull();
+  });
+
+  it('memuMemorize returns null when disabled', async () => {
+    const result = await memuMemorize(
+      [{ role: 'user', content: 'test' }],
+      { ...apiConfig, enabled: false },
+    );
+    expect(result).toBeNull();
+  });
+
+  it('memuCategories returns null when engine is embedded', async () => {
+    const result = await memuCategories(baseConfig);
+    expect(result).toBeNull();
+  });
+
+  it('memuCategories returns null when disabled', async () => {
+    const result = await memuCategories({ ...apiConfig, enabled: false });
+    expect(result).toBeNull();
   });
 });
 

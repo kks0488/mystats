@@ -4,7 +4,8 @@ import { LanguageContext, type Language } from './LanguageContext';
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
     const [language, setLanguageState] = useState<Language>(() => {
-        const saved = localStorage.getItem('app_lang');
+        let saved: string | null = null;
+        try { saved = localStorage.getItem('app_lang'); } catch { /* private mode */ }
         return (saved as Language) || 'en';
     });
 

@@ -23,11 +23,11 @@ interface NavItemProps {
 }
 
 const NavItem = ({ to, icon, label, active, onClick }: NavItemProps) => (
-  <Link to={to} onClick={onClick} className="block group">
+  <Link to={to} onClick={onClick} aria-current={active ? "page" : undefined} className="block group">
     <div className={cn(
       "flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 ease-out",
-      active 
-        ? "bg-primary text-white shadow-lg shadow-primary/20" 
+      active
+        ? "bg-primary text-white shadow-lg shadow-primary/20"
         : "text-gray-400 hover:bg-secondary hover:text-white"
     )}>
       <div className="flex items-center gap-3">
@@ -80,7 +80,7 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
           </div>
           <div className="flex flex-col">
             <span className="font-black text-2xl tracking-tighter leading-none">MyStats</span>
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Vibe Intelligence</span>
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">{t('vibeIntelligence')}</span>
           </div>
         </div>
 

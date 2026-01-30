@@ -1,7 +1,7 @@
 {
   "name": "mystats",
-  "version": "1.2.5",
-  "description": "AI-Powered Self-Discovery & Career Strategy Engine. Transform your scattered thoughts into actionable intelligence using Google Gemini.",
+  "version": "1.2.6",
+  "description": "AI-Powered Self-Discovery & Career Strategy Engine. Transform your scattered thoughts into actionable intelligence using Gemini, OpenAI, Claude, or Grok.",
   "author": "Kyoungsoo Kim <kks0488@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -34,6 +34,8 @@
     "lint": "node node_modules/eslint/bin/eslint.js .",
     "test": "node node_modules/vitest/vitest.mjs run",
     "test:watch": "node node_modules/vitest/vitest.mjs",
+    "test:e2e": "node node_modules/@playwright/test/cli.js test",
+    "test:e2e:install": "node node_modules/playwright/cli.js install --with-deps chromium",
     "preview": "node node_modules/vite/bin/vite.js preview"
   },
   "dependencies": {
@@ -59,6 +61,7 @@
     "zod": "^4.2.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.0",
     "@eslint/js": "^9.39.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

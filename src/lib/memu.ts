@@ -46,6 +46,48 @@ export interface MemuCheckSimilarResponse {
   message: string;
 }
 
+// --- memU v3 API types ---
+
+export type MemuRetrieveMethod = 'rag' | 'llm';
+
+export interface MemuMemorizeRequest {
+  conversation: Array<{ role: string; content: string }>;
+  user_name?: string;
+  agent_name?: string;
+}
+
+export interface MemuMemorizeResponse {
+  success: boolean;
+  task_id?: string;
+  message: string;
+}
+
+export interface MemuMemorizeStatus {
+  task_id: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  progress?: number;
+  message?: string;
+}
+
+export interface MemuCategory {
+  name: string;
+  description?: string;
+  item_count?: number;
+}
+
+export interface MemuCategoriesResponse {
+  success: boolean;
+  categories: MemuCategory[];
+  message: string;
+}
+
+export interface MemuRetrieveV3Options {
+  userId?: string;
+  topK?: number;
+  method?: MemuRetrieveMethod;
+  timeoutMs?: number;
+}
+
 const STORAGE_KEY = 'MYSTATS_MEMU_CONFIG_V1';
 
 const DEFAULT_CONFIG: MemuConfig = {
@@ -144,6 +186,81 @@ const EMBED_CACHE_MAX_ITEMS = 2500;
 
 type EmbeddedVecCacheEntry = { signature: number; vec: Float32Array };
 const embeddedVecCache = new Map<string, EmbeddedVecCacheEntry>();
+
+type EmbeddedWorkerResponse =
+  | { id: string; ok: false; error: string }
+  | { id: string; ok: true; type: 'retrieve'; items: MemuRetrieveItem[] }
+  | {
+      id: string;
+      ok: true;
+      type: 'checkSimilar';
+      is_similar: boolean;
+      similarity_score: number;
+      similar_items: MemuCheckSimilarResponse['similar_items'];
+    };
+
+let embeddedWorker: Worker | null = null;
+let embeddedWorkerDisabled = false;
+const embeddedWorkerPending = new Map<string, { resolve: (value: EmbeddedWorkerResponse) => void; timeoutId: number }>();
+
+function createRequestId(): string {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  }
+}
+
+function getEmbeddedWorker(): Worker | null {
+  if (embeddedWorkerDisabled) return null;
+  if (embeddedWorker) return embeddedWorker;
+  if (typeof Worker === 'undefined') return null;
+  try {
+    embeddedWorker = new Worker(new URL('./memu.worker.ts', import.meta.url), { type: 'module' });
+    embeddedWorker.onmessage = (event: MessageEvent<EmbeddedWorkerResponse>) => {
+      const msg = event.data;
+      if (!msg || typeof msg !== 'object') return;
+      const pending = embeddedWorkerPending.get(msg.id);
+      if (!pending) return;
+      window.clearTimeout(pending.timeoutId);
+      embeddedWorkerPending.delete(msg.id);
+      pending.resolve(msg);
+    };
+    embeddedWorker.onerror = () => {
+      embeddedWorkerDisabled = true;
+      embeddedWorker?.terminate();
+      embeddedWorker = null;
+      for (const [id, pending] of embeddedWorkerPending.entries()) {
+        window.clearTimeout(pending.timeoutId);
+        pending.resolve({ id, ok: false, error: 'Worker error' });
+      }
+      embeddedWorkerPending.clear();
+    };
+    return embeddedWorker;
+  } catch {
+    embeddedWorkerDisabled = true;
+    embeddedWorker = null;
+    return null;
+  }
+}
+
+async function runEmbeddedWorker(
+  payload: { id: string; [key: string]: unknown },
+  timeoutMs: number,
+): Promise<EmbeddedWorkerResponse | null> {
+  const worker = getEmbeddedWorker();
+  if (!worker) return null;
+  const id = payload.id;
+  return await new Promise<EmbeddedWorkerResponse>((resolve) => {
+    const safeTimeoutMs = Math.max(200, Number(timeoutMs || DEFAULT_TIMEOUT_MS));
+    const timeoutId = window.setTimeout(() => {
+      embeddedWorkerPending.delete(id);
+      resolve({ id, ok: false, error: 'Worker timeout' });
+    }, safeTimeoutMs);
+    embeddedWorkerPending.set(id, { resolve, timeoutId });
+    worker.postMessage(payload);
+  });
+}
 
 function isAbortError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
@@ -375,9 +492,28 @@ async function embeddedRetrieve(
   }
 
   const topK = Math.max(1, Number(options?.topK ?? 5));
+  const timeoutMs = Math.max(200, Number(options?.timeoutMs ?? DEFAULT_TIMEOUT_MS));
   const entries = await loadEmbeddedJournalEntries();
   if (!entries.length) {
     return { success: true, categories: [], items: [], message: 'No journal entries' };
+  }
+
+  const worker = getEmbeddedWorker();
+  if (worker) {
+    const res = await runEmbeddedWorker(
+      {
+        id: createRequestId(),
+        type: 'retrieve',
+        query,
+        entries,
+        userId: config.userId,
+        topK,
+      },
+      timeoutMs
+    );
+    if (res?.ok && 'type' in res && res.type === 'retrieve') {
+      return { success: true, categories: [], items: res.items, message: `Found ${res.items.length} items (embedded)` };
+    }
   }
 
   const qVec = embedText(query);
@@ -414,9 +550,33 @@ async function embeddedCheckSimilar(
   }
 
   const threshold = Math.min(1, Math.max(0, Number(options?.threshold ?? config.dedupeThreshold)));
+  const timeoutMs = Math.max(200, Number(options?.timeoutMs ?? DEFAULT_TIMEOUT_MS));
   const entries = await loadEmbeddedJournalEntries();
   if (!entries.length) {
     return { is_similar: false, similarity_score: 0, similar_items: [], message: 'No journal entries' };
+  }
+
+  const worker = getEmbeddedWorker();
+  if (worker) {
+    const res = await runEmbeddedWorker(
+      {
+        id: createRequestId(),
+        type: 'checkSimilar',
+        content,
+        entries,
+        userId: config.userId,
+        threshold,
+      },
+      timeoutMs
+    );
+    if (res?.ok && 'type' in res && res.type === 'checkSimilar') {
+      return {
+        is_similar: res.is_similar,
+        similarity_score: res.similarity_score,
+        similar_items: res.similar_items,
+        message: res.is_similar ? `Found ${res.similar_items.length} similar items (embedded)` : 'No similar content found (embedded)',
+      };
+    }
   }
 
   const targetVec = embedText(content);
@@ -444,4 +604,133 @@ async function embeddedCheckSimilar(
     similar_items: top,
     message: top.length ? `Found ${top.length} similar items (embedded)` : 'No similar content found (embedded)',
   };
+}
+
+// ---------------------------------------------------------------------------
+// memU v3 API — additive functions (existing API untouched)
+// ---------------------------------------------------------------------------
+
+const MEMORIZE_TIMEOUT_MS = 15000;
+
+/**
+ * Store a conversation as structured memory via memU v3 memorize API.
+ * Falls back gracefully — returns null when API mode is off or the call fails.
+ */
+export async function memuMemorize(
+  conversation: MemuMemorizeRequest['conversation'],
+  config: MemuConfig = getMemuConfig(),
+  options?: { userName?: string; agentName?: string; timeoutMs?: number },
+): Promise<MemuMemorizeResponse | null> {
+  if (!config.enabled || config.engine !== 'api') return null;
+  const timeoutMs = Math.max(500, Number(options?.timeoutMs ?? MEMORIZE_TIMEOUT_MS));
+  const payload: MemuMemorizeRequest = {
+    conversation,
+    user_name: options?.userName ?? 'User',
+    agent_name: options?.agentName ?? 'MyStats',
+  };
+  try {
+    const response = await fetchWithTimeout(
+      joinUrl(config.baseUrl, '/api/v3/memory/memorize'),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      },
+      timeoutMs,
+    );
+    if (!response.ok) return null;
+    return (await response.json()) as MemuMemorizeResponse;
+  } catch (error) {
+    if (isAbortError(error)) return null;
+    return null;
+  }
+}
+
+/**
+ * Poll the status of a running memorize task.
+ */
+export async function memuMemorizeStatusCheck(
+  taskId: string,
+  config: MemuConfig = getMemuConfig(),
+): Promise<MemuMemorizeStatus | null> {
+  if (!config.enabled || config.engine !== 'api') return null;
+  try {
+    const response = await fetchWithTimeout(
+      joinUrl(config.baseUrl, `/api/v3/memory/memorize/status/${encodeURIComponent(taskId)}`),
+      undefined,
+      DEFAULT_TIMEOUT_MS,
+    );
+    if (!response.ok) return null;
+    return (await response.json()) as MemuMemorizeStatus;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Enhanced retrieve using memU v3 API with dual retrieval method support.
+ * - method="rag": Fast embedding-based retrieval (sub-second).
+ * - method="llm": Deep predictive reasoning (slower but more accurate).
+ *
+ * When running in embedded mode, falls through to the existing embeddedRetrieve.
+ */
+export async function memuRetrieveV3(
+  query: string,
+  config: MemuConfig = getMemuConfig(),
+  options?: MemuRetrieveV3Options,
+): Promise<MemuRetrieveResponse | null> {
+  if (!config.enabled) return null;
+  if (config.engine === 'embedded') {
+    return await embeddedRetrieve(query, config, options);
+  }
+  const userId = (options?.userId || config.userId).trim() || config.userId;
+  const topK = Math.max(1, Number(options?.topK ?? 5));
+  const method: MemuRetrieveMethod = options?.method ?? 'rag';
+  const timeoutMs = Math.max(500, Number(options?.timeoutMs ?? (method === 'llm' ? 15000 : DEFAULT_TIMEOUT_MS)));
+  try {
+    const response = await fetchWithTimeout(
+      joinUrl(config.baseUrl, '/api/v3/memory/retrieve'),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, user_id: userId, top_k: topK, method }),
+      },
+      timeoutMs,
+    );
+    if (!response.ok) {
+      // Graceful fallback: try legacy endpoint
+      return await memuRetrieve(query, config, options);
+    }
+    return (await response.json()) as MemuRetrieveResponse;
+  } catch (error) {
+    if (isAbortError(error)) return null;
+    // Fallback to legacy retrieve on network error
+    return await memuRetrieve(query, config, options);
+  }
+}
+
+/**
+ * Fetch auto-generated memory categories from memU v3.
+ */
+export async function memuCategories(
+  config: MemuConfig = getMemuConfig(),
+  options?: { userId?: string },
+): Promise<MemuCategoriesResponse | null> {
+  if (!config.enabled || config.engine !== 'api') return null;
+  const userId = (options?.userId || config.userId).trim() || config.userId;
+  try {
+    const response = await fetchWithTimeout(
+      joinUrl(config.baseUrl, '/api/v3/memory/categories'),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId }),
+      },
+      DEFAULT_TIMEOUT_MS,
+    );
+    if (!response.ok) return null;
+    return (await response.json()) as MemuCategoriesResponse;
+  } catch {
+    return null;
+  }
 }

@@ -55,9 +55,11 @@ export const Home = () => {
         setAiConfigured(status.configured);
         try {
             const db = await getDB();
-            const entries = await db.getAllFromIndex('journal', 'by-date');
-            const skills = await db.getAll('skills');
-            const insights = await db.getAll('insights');
+            const [entries, skills, insights] = await Promise.all([
+                db.getAllFromIndex('journal', 'by-date'),
+                db.getAll('skills'),
+                db.getAll('insights'),
+            ]);
             setStats({ entries: entries.length, skills: skills.length, insights: insights.length });
             setRecentEntries(entries.slice(-3).reverse());
             const latest = [...insights].sort((a, b) => b.timestamp - a.timestamp)[0];

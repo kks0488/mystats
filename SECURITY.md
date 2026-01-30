@@ -8,12 +8,28 @@
 
 ## Security Design
 
-MyStats is designed with **privacy-first** principles:
+MyStats is designed with **privacy-first, local-first** principles:
 
-- **No Backend**: All data stored locally in IndexedDB
-- **No Data Collection**: We never see your data
-- **Direct API Connection**: Your Gemini API key connects directly to Google
-- **Client-Side Only**: No server-side processing
+### Data Storage
+- **Local-first**: All data (journals, skills, insights) stored in IndexedDB in the user's browser
+- **Fallback storage**: localStorage / in-memory when IndexedDB is unavailable
+- **No mandatory backend**: No tracking, no analytics, no data collection by default
+- **Cloud Sync (optional)**: When explicitly enabled, data syncs via Supabase (encrypted in transit via TLS)
+
+### AI Providers (BYOK)
+- **Direct API connection**: Your API key connects directly from the browser to the chosen provider
+- Supported providers: **Gemini, OpenAI, Claude, Grok**
+- API keys are stored in `localStorage` and **never leave your browser**
+- API keys are **not included** in Cloud Sync (stays per-device)
+
+### memU Memory System
+- **Embedded mode (default)**: Runs entirely in the browser — no external calls
+- **Server mode (optional)**: Connects to a user-controlled local memU server only
+
+### Cloud Sync (Beta)
+- Uses **Supabase Auth** (email magic link) — no passwords stored locally
+- Row Level Security (RLS) enforced: users can only read/write their own data
+- Supabase anon key is a public client key (safe to expose, scoped by RLS)
 
 ## Reporting a Vulnerability
 
@@ -30,6 +46,7 @@ We'll respond within 48 hours.
 
 ## API Key Safety
 
-- Your Gemini API key is stored in `localStorage`
+- API keys are stored in `localStorage` per device
 - Never commit your API key to the repository
-- Use environment variables for development
+- Use environment variables for development (see `.env.example`)
+- In Safari private mode, `localStorage` may be unavailable — the app handles this gracefully

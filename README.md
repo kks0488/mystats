@@ -217,12 +217,19 @@ If you already run a local `memU` server, you can switch to **Server (API)** in 
 |----------|------------|
 | **Framework** | React 19 + Vite 7 |
 | **Language** | TypeScript 5.9 (Strict Mode) |
-| **Styling** | Tailwind CSS + shadcn/ui |
+| **Styling** | Tailwind CSS 3 + shadcn/ui |
 | **Animation** | Framer Motion |
-| **AI Engine** | Gemini / OpenAI / Claude / Grok (bring your own key) |
-| **Database** | IndexedDB (via idb) |
+| **AI Engine** | Gemini / OpenAI / Claude / Grok (BYOK) |
+| **Local DB** | IndexedDB (via idb) + localStorage fallback |
+| **Cloud Sync** | Supabase (Auth + Postgres, optional) |
+| **Memory** | memU (embedded browser engine or API server) |
 | **Validation** | Zod |
 | **Icons** | Lucide React |
+| **Routing** | React Router 7 |
+| **Error Tracking** | Sentry (optional, lazy-loaded) |
+| **PWA** | vite-plugin-pwa (Workbox) |
+| **Testing** | Vitest + Testing Library |
+| **CI/CD** | GitHub Actions → Vercel |
 
 ---
 
@@ -232,14 +239,41 @@ If you already run a local `memU` server, you can switch to **Server (API)** in 
 mystats/
 ├── src/
 │   ├── components/
-│   │   ├── layout/      # Shell, Navigation
-│   │   └── ui/          # shadcn/ui components
-│   ├── db/              # IndexedDB operations
-│   ├── hooks/           # Custom React hooks
-│   ├── lib/             # Multi-AI providers, utilities
-│   ├── pages/           # Home, Journal, Profile, Strategy
-│   └── App.tsx
-├── public/
+│   │   ├── layout/          # Shell (app frame, navigation, page transitions)
+│   │   ├── ui/              # shadcn/ui primitives (Button, Card, Badge, Input…)
+│   │   ├── ErrorBoundary    # Global crash boundary + debug report
+│   │   └── PwaUpdatePrompt  # SW update / offline-ready toast
+│   ├── db/
+│   │   ├── db.ts            # IndexedDB schema, migrations, CRUD helpers
+│   │   └── fallback.ts      # localStorage / in-memory fallback storage
+│   ├── hooks/
+│   │   ├── useLanguage.ts   # i18n context consumer hook
+│   │   └── useDbRecovery.ts # Automatic fallback → DB recovery
+│   ├── lib/
+│   │   ├── ai-provider.ts   # Multi-AI engine (Gemini/OpenAI/Claude/Grok)
+│   │   ├── memu.ts          # memU memory system (embedded + server API)
+│   │   ├── cloudSync.ts     # Supabase Cloud Sync logic
+│   │   ├── cloudSyncManager.ts # Auto-sync orchestrator
+│   │   ├── supabase.ts      # Supabase client init
+│   │   ├── sentry.ts        # Sentry lazy loader
+│   │   ├── debug.ts         # Debug snapshot report
+│   │   ├── translations.ts  # EN/KO translation strings
+│   │   ├── LanguageProvider  # React context provider for i18n
+│   │   ├── LanguageContext   # Language context definition
+│   │   └── utils.ts         # Shared utilities (cn, normalizeSkillName…)
+│   ├── pages/
+│   │   ├── Home.tsx         # Dashboard with stats & quick start
+│   │   ├── Journal.tsx      # Neural memory journal (write + AI analyze)
+│   │   ├── Profile.tsx      # Deep intelligence profile (skills, archetypes)
+│   │   ├── Strategy.tsx     # AI strategy engine (problem → action plan)
+│   │   └── Settings.tsx     # API keys, memU, Cloud Sync, backup/restore
+│   ├── test/                # Test setup (Vitest + jsdom)
+│   ├── App.tsx              # Router + providers + lazy page loading
+│   └── main.tsx             # Entry point + Sentry init
+├── chrome-extension/        # Chrome toolbar launcher extension
+├── docs/                    # Additional documentation
+├── supabase/                # Supabase SQL migrations
+├── public/                  # Static assets, PWA manifest, icons
 └── package.json
 ```
 

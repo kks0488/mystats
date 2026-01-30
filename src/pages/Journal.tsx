@@ -16,20 +16,18 @@ import { getDB, upsertSkill, DB_ERRORS, DB_OP_TIMEOUT_MS, type MyStatsDB, type S
 import {
     loadFallbackJournalEntries,
     saveFallbackJournalEntry,
-    loadFallbackSkills,
-    loadFallbackInsights,
     upsertFallbackSkill,
     addFallbackInsight,
-    clearFallbackData,
     getFallbackStorageMode,
 } from '../db/fallback';
 import { analyzeEntryWithAI, checkAIStatus } from '../lib/ai-provider';
-import { generateId } from '../lib/utils';
+import { generateId, normalizeSkillName } from '../lib/utils';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '../hooks/useLanguage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { getMemuConfig, memuCheckSimilar, memuCreateItem } from '@/lib/memu';
+import { getMemuConfig, memuCheckSimilar, memuCreateItem, memuMemorize } from '@/lib/memu';
+import { useDbRecovery } from '../hooks/useDbRecovery';
 
 export const Journal = () => {
     const { t, language } = useLanguage();
@@ -46,18 +44,12 @@ export const Journal = () => {
     const [hideDbNotice, setHideDbNotice] = useState(() => {
         return sessionStorage.getItem('MYSTATS_HIDE_DB_NOTICE') === '1';
     });
-    const migrationInProgress = useRef(false);
-
-    const normalizeSkillName = (value: string) =>
-        value
-            .trim()
-            .replace(/\s+/g, ' ')
-        .replace(/^["'`]+|["'`]+$/g, '')
-            .replace(/[.!?;:]+$/g, '');
 
     const setFallbackNotice = useCallback(() => {
         setDbNotice(getFallbackStorageMode() === 'memory' ? t('dbFallbackSession') : t('dbFallbackMode'));
     }, [t]);
+
+    const { maybeRecoverFallbackData } = useDbRecovery(setDbNotice, setFallbackNotice);
 
     const isDbFailure = (error: unknown): boolean => {
         if (!(error instanceof Error)) return false;
@@ -65,59 +57,23 @@ export const Journal = () => {
             error.message === DB_ERRORS.blocked ||
             error.message === DB_ERRORS.timeout ||
             error.name === 'NotFoundError' ||
+            error.name === 'VersionError' ||
+            error.name === 'QuotaExceededError' ||
             error.message.includes('object stores')
         );
     };
-
-    const maybeRecoverFallbackData = useCallback(async (db: IDBPDatabase<MyStatsDB>) => {
-        if (migrationInProgress.current) return false;
-        const fallbackEntries = loadFallbackJournalEntries();
-        const fallbackSkills = loadFallbackSkills();
-        const fallbackInsights = loadFallbackInsights();
-        if (!fallbackEntries.length && !fallbackSkills.length && !fallbackInsights.length) return false;
-        migrationInProgress.current = true;
-        setDbNotice(t('dbRecovering'));
-        try {
-            const tx = db.transaction(['journal', 'skills', 'insights'], 'readwrite');
-            const journalStore = tx.objectStore('journal');
-            const skillStore = tx.objectStore('skills');
-            const insightStore = tx.objectStore('insights');
-
-            for (const entry of fallbackEntries) {
-                await journalStore.put(entry);
-            }
-            for (const skill of fallbackSkills) {
-                await skillStore.put(skill);
-            }
-            for (const insight of fallbackInsights) {
-                await insightStore.put(insight);
-            }
-
-            await tx.done;
-            clearFallbackData();
-            setDbNotice(t('dbRecovered'));
-            setTimeout(() => setDbNotice(null), 4000);
-            return true;
-        } catch (error) {
-            console.warn('Failed to recover fallback entries', error);
-            setFallbackNotice();
-            return false;
-        } finally {
-            migrationInProgress.current = false;
-        }
-    }, [setFallbackNotice, t]);
 
     const loadHistory = useCallback(async () => {
         try {
             const db = await getDB();
             const allEntries = await db.getAllFromIndex('journal', 'by-date');
-            setHistory(allEntries.reverse());
+            setHistory(allEntries.toReversed());
             setDbNotice(null);
             setAnalysisError(null);
             const recovered = await maybeRecoverFallbackData(db);
             if (recovered) {
                 const refreshed = await db.getAllFromIndex('journal', 'by-date');
-                setHistory(refreshed.reverse());
+                setHistory(refreshed.toReversed());
             }
         } catch {
             setHistory(loadFallbackJournalEntries());
@@ -223,6 +179,12 @@ export const Journal = () => {
                             if (check?.is_similar) return;
                         }
                         await memuCreateItem(memuContent, memuConfig, { memoryType: 'journal', timeoutMs: 6000 });
+                        // Also store as structured conversation for v3 memorize (additive)
+                        await memuMemorize(
+                          [{ role: 'user', content: entryContent }],
+                          memuConfig,
+                          { userName: 'User', agentName: 'MyStats' },
+                        );
                     } catch {
                         // Ignore memU errors (graceful degradation)
                     }
@@ -326,7 +288,7 @@ export const Journal = () => {
             <header className="space-y-4">
                 <div className="flex items-center gap-2 text-primary font-mono text-xs font-bold uppercase tracking-[0.3em]">
                     <BookOpen className="w-4 h-4" />
-                    Neural Memory Bridge
+                    {t('neuralMemoryBridge')}
                 </div>
                 <h1 className="text-5xl font-black tracking-tighter">{t('journalTitle')}</h1>
                 <p className="text-xl text-muted-foreground font-medium max-w-2xl leading-relaxed">
@@ -355,7 +317,7 @@ export const Journal = () => {
                                         setContent(entry.content);
                                     }}
                                     className={cn(
-                                        "w-full p-4 rounded-2xl text-left transition-all group relative overflow-hidden",
+                                        "journal-entry-item w-full p-4 rounded-2xl text-left transition-all group relative overflow-hidden",
                                         selectedEntryId === entry.id ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-secondary/20 hover:bg-secondary/40 border border-border"
                                     )}
                                 >
@@ -450,6 +412,12 @@ export const Journal = () => {
                         <textarea
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
+                            onKeyDown={(e) => {
+                                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleSave();
+                                }
+                            }}
                             placeholder={t('journalPlaceholder')}
                             disabled={status === 'saving'}
                             className="w-full min-h-[500px] p-10 bg-transparent resize-none focus:outline-none text-xl font-medium leading-relaxed placeholder:text-muted-foreground/30 custom-scrollbar"

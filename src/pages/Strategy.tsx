@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { 
-  Loader2, 
-  Sparkles, 
-  Target, 
+import React, { useState, Suspense } from 'react';
+import {
+  Loader2,
+  Sparkles,
+  Target,
   Globe,
   BrainCircuit,
   MessageSquareQuote,
@@ -10,7 +10,8 @@ import {
   ShieldCheck,
   AlertTriangle
 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+
+const ReactMarkdown = React.lazy(() => import('react-markdown'));
 import { getDB, DB_ERRORS, type Skill, type Insight } from '../db/db';
 import { loadFallbackSkills, loadFallbackInsights } from '../db/fallback';
 import { generateStrategy, checkAIStatus } from '../lib/ai-provider';
@@ -20,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '../hooks/useLanguage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { getMemuConfig, memuRetrieve, type MemuEngine } from '@/lib/memu';
+import { getMemuConfig, memuRetrieveV3, type MemuEngine, type MemuRetrieveItem } from '@/lib/memu';
 
 export const Strategy = () => {
     const { t, language } = useLanguage();
@@ -29,6 +30,7 @@ export const Strategy = () => {
     const [status, setStatus] = useState<'idle' | 'generating' | 'completed' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [memuRunInfo, setMemuRunInfo] = useState<{ engine: MemuEngine; hits: number; failed: boolean } | null>(null);
+    const [memuSources, setMemuSources] = useState<{ personal: MemuRetrieveItem[]; projects: MemuRetrieveItem[] } | null>(null);
 
     const handleGenerate = async () => {
         if (!problem.trim()) return;
@@ -36,14 +38,17 @@ export const Strategy = () => {
         setSolution('');
         setErrorMessage(null);
         setMemuRunInfo(null);
+        setMemuSources(null);
 
         try {
             let skills: Skill[] = [];
             let insights: Insight[] = [];
             try {
                 const db = await getDB();
-                skills = await db.getAll('skills');
-                insights = await db.getAll('insights');
+                [skills, insights] = await Promise.all([
+                    db.getAll('skills'),
+                    db.getAll('insights'),
+                ]);
             } catch (error) {
                 skills = loadFallbackSkills();
                 insights = loadFallbackInsights();
@@ -88,9 +93,12 @@ export const Strategy = () => {
                 const engine = memuConfig.engine;
                 let memuHits = 0;
                 let memuFailed = false;
+                let personalItems: MemuRetrieveItem[] = [];
+                let projectItems: MemuRetrieveItem[] = [];
 
-                const memuPersonal = await memuRetrieve(problem, memuConfig, { topK: 4, timeoutMs: 4000 });
+                const memuPersonal = await memuRetrieveV3(problem, memuConfig, { topK: 4, method: 'rag', timeoutMs: 4000 });
                 if (!memuPersonal) memuFailed = true;
+                personalItems = memuPersonal?.items || [];
                 const personalLines = (memuPersonal?.items || [])
                     .map((item) => {
                         const summary = (item.summary || '').replace(/\s+/g, ' ').trim();
@@ -103,8 +111,9 @@ export const Strategy = () => {
 
                 let computedProjectLines: string[] = [];
                 if (memuConfig.includeProjectRegistryInStrategy) {
-                    const memuProjects = await memuRetrieve(problem, memuConfig, { userId: 'project-registry', topK: 3, timeoutMs: 3000 });
+                    const memuProjects = await memuRetrieveV3(problem, memuConfig, { userId: 'project-registry', topK: 3, method: 'rag', timeoutMs: 3000 });
                     if (!memuProjects) memuFailed = true;
+                    projectItems = memuProjects?.items || [];
                     computedProjectLines = (memuProjects?.items || [])
                         .map((item) => {
                             const summary = (item.summary || '').replace(/\s+/g, ' ').trim();
@@ -114,6 +123,7 @@ export const Strategy = () => {
                 }
                 memuHits += computedProjectLines.length;
                 setMemuRunInfo({ engine, hits: memuHits, failed: memuFailed });
+                setMemuSources({ personal: personalItems, projects: projectItems });
 
                 if (personalLines.length || (computedProjectLines?.length ?? 0)) {
                     context += `\n\n=== memU CONTEXT ===\n`;
@@ -154,7 +164,7 @@ export const Strategy = () => {
             <header className="space-y-4">
                 <div className="flex items-center gap-2 text-primary font-mono text-xs font-bold uppercase tracking-[0.3em]">
                     <Globe className="w-4 h-4" />
-                    Neural Strategy Engine
+                    {t('neuralStrategyEngine')}
                 </div>
                 <h1 className="text-5xl font-black tracking-tighter text-foreground">
                   {t('strategistTitle')}
@@ -214,11 +224,11 @@ export const Strategy = () => {
                     <div className="hidden md:grid grid-cols-2 gap-4">
                         <div className="p-4 bg-secondary/10 border border-border rounded-2xl flex items-center gap-3 group">
                             <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg group-hover:scale-110 transition-transform"><BrainCircuit size={16} /></div>
-                            <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none">Neural<br/><span className="text-foreground text-[10px] font-bold">Sync</span></div>
+                            <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none">Neural<br/><span className="text-foreground text-[10px] font-bold">{t('neuralSync')}</span></div>
                         </div>
                         <div className="p-4 bg-secondary/10 border border-border rounded-2xl flex items-center gap-3 group">
                             <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg group-hover:scale-110 transition-transform"><ShieldCheck size={16} /></div>
-                            <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none">Intel<br/><span className="text-foreground text-[10px] font-bold">Verified</span></div>
+                            <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none">Intel<br/><span className="text-foreground text-[10px] font-bold">{t('intelVerified')}</span></div>
                         </div>
                     </div>
                 </div>
@@ -231,7 +241,7 @@ export const Strategy = () => {
                                 <div className="p-3 bg-amber-500/10 text-amber-500 rounded-2xl ring-1 ring-amber-500/20">
                                     <Sparkles className="w-6 h-6" />
                                 </div>
-                                <CardTitle className="text-2xl font-black tracking-tight">Strategy Output</CardTitle>
+                                <CardTitle className="text-2xl font-black tracking-tight">{t('strategyOutput')}</CardTitle>
                              </div>
                              <div className="flex items-center gap-2">
                                 {memuRunInfo && (
@@ -250,7 +260,7 @@ export const Strategy = () => {
                                 )}
                                 {status === 'completed' && (
                                     <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase">
-                                        Optimized
+                                        {t('optimized')}
                                     </Badge>
                                 )}
                              </div>
@@ -272,8 +282,8 @@ export const Strategy = () => {
                                             <BrainCircuit className="w-10 h-10 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                                         </div>
                                         <div className="space-y-3">
-                                            <p className="text-2xl font-black text-foreground tracking-tight">Assembling Intelligence...</p>
-                                            <p className="text-xs text-muted-foreground font-black tracking-widest uppercase">Processing identity markers & patterns</p>
+                                            <p className="text-2xl font-black text-foreground tracking-tight">{t('assemblingIntelligence')}</p>
+                                            <p className="text-xs text-muted-foreground font-black tracking-widest uppercase">{t('processingIdentity')}</p>
                                         </div>
                                     </motion.div>
                                 ) : status === 'error' ? (
@@ -300,7 +310,51 @@ export const Strategy = () => {
                                         animate={{ opacity: 1, y: 0 }}
                                         className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-black prose-headings:tracking-tight prose-p:text-lg prose-p:leading-relaxed prose-strong:text-primary"
                                     >
-                                        <ReactMarkdown>{solution}</ReactMarkdown>
+                                        {memuSources && (memuSources.personal.length > 0 || memuSources.projects.length > 0) && (
+                                            <div className="not-prose mb-6">
+                                                <details className="rounded-2xl border border-border bg-background/40 p-4">
+                                                    <summary className="cursor-pointer text-xs font-black uppercase tracking-widest text-muted-foreground">
+                                                        {language === 'ko' ? 'memU 근거 보기' : 'View memU Sources'}
+                                                    </summary>
+                                                    <div className="mt-4 space-y-4">
+                                                        {memuSources.personal.length > 0 && (
+                                                            <div className="space-y-2">
+                                                                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                                                                    {language === 'ko' ? '개인 메모리' : 'Personal Memory'}
+                                                                </p>
+                                                                <ul className="space-y-2">
+                                                                    {memuSources.personal.map((item) => (
+                                                                        <li key={item.id} className="text-sm text-muted-foreground">
+                                                                            <span className="font-mono text-xs text-muted-foreground/80">
+                                                                                {typeof item.score === 'number' ? `${item.score.toFixed(2)} · ` : ''}
+                                                                            </span>
+                                                                            {(item.summary || '').replace(/\s+/g, ' ').trim().slice(0, 180)}
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        )}
+                                                        {memuSources.projects.length > 0 && (
+                                                            <div className="space-y-2">
+                                                                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                                                                    {language === 'ko' ? '프로젝트 레지스트리' : 'Project Registry'}
+                                                                </p>
+                                                                <ul className="space-y-2">
+                                                                    {memuSources.projects.map((item) => (
+                                                                        <li key={item.id} className="text-sm text-muted-foreground">
+                                                                            {(item.summary || '').replace(/\s+/g, ' ').trim().slice(0, 180)}
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </details>
+                                            </div>
+                                        )}
+                                        <Suspense fallback={<div className="animate-pulse text-muted-foreground">{t('thinking')}</div>}>
+                                            <ReactMarkdown>{solution}</ReactMarkdown>
+                                        </Suspense>
                                     </motion.div>
                                 ) : (
                                     <div className="h-full flex flex-col items-center justify-center text-center space-y-8">
@@ -314,7 +368,7 @@ export const Strategy = () => {
                                                 <span className="lg:hidden">{t('strategistEmptyStateMobile')}</span>
                                             </p>
                                             <p className="text-sm text-muted-foreground/60 leading-relaxed font-medium">
-                                                Provide a core challenge to begin strategic alignment with your unique capability profile.
+                                                {t('strategyEmptyHint')}
                                             </p>
                                         </div>
                                     </div>
@@ -324,8 +378,8 @@ export const Strategy = () => {
 
                         <div className="px-10 py-6 bg-secondary/5 border-t border-border flex items-center justify-between text-[10px] font-black text-muted-foreground tracking-widest uppercase">
                             <div className="flex items-center gap-6">
-                                <span className="flex items-center gap-2"><Zap size={12} className="text-primary" /> Real-time Evolution</span>
-                                <span className="flex items-center gap-2"><MessageSquareQuote size={12} /> Verified Logic</span>
+                                <span className="flex items-center gap-2"><Zap size={12} className="text-primary" /> {t('realTimeEvolution')}</span>
+                                <span className="flex items-center gap-2"><MessageSquareQuote size={12} /> {t('verifiedLogic')}</span>
                             </div>
                             <span className="font-mono opacity-50">v{__APP_VERSION__}</span>
                         </div>

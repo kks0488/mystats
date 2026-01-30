@@ -152,24 +152,31 @@ export const initDB = async () => {
     }
   })();
 
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
   const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => {
+    timeoutId = setTimeout(() => {
       reject(new Error(isBlocked ? DB_ERRORS.blocked : DB_ERRORS.timeout));
     }, DB_OPEN_TIMEOUT_MS);
   });
 
-  const db = await Promise.race([openPromise, timeoutPromise]);
-  if (!hasAllStores(db)) {
-    console.warn('[DB] Missing stores detected. Forcing schema upgrade.');
-    const nextVersion = db.version + 1;
-    db.close();
-    return await openDB<MyStatsDB>(DB_NAME, nextVersion, {
-      upgrade(upgradeDb) {
-        ensureStores(upgradeDb);
-      },
-    });
+  try {
+    const db = await Promise.race([openPromise, timeoutPromise]);
+    if (!hasAllStores(db)) {
+      console.warn('[DB] Missing stores detected. Forcing schema upgrade.');
+      const nextVersion = db.version + 1;
+      db.close();
+      return await openDB<MyStatsDB>(DB_NAME, nextVersion, {
+        upgrade(upgradeDb) {
+          ensureStores(upgradeDb);
+        },
+      });
+    }
+    return db;
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
   }
-  return db;
 };
 
 /**
@@ -284,8 +291,7 @@ export const getDB = async () => {
 export const exportAllData = async () => {
     const db = await getDB();
     const stores = ['journal', 'skills', 'solutions', 'insights'] as const;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const exportData: Record<string, any[]> = {};
+    const exportData: Record<string, (JournalEntry | Skill | Solution | Insight)[]> = {};
 
     for (const storeName of stores) {
         const tx = db.transaction(storeName, 'readonly');
@@ -300,8 +306,7 @@ export const exportAllData = async () => {
  * Imports data from a JSON object into IndexedDB.
  * Performs validation before saving.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const importAllData = async (data: Record<string, any[]>) => {
+export const importAllData = async (data: Record<string, unknown[]>) => {
     const db = await getDB();
     const stores = ['journal', 'skills', 'solutions', 'insights'] as const;
 

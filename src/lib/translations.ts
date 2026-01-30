@@ -184,7 +184,22 @@ export const translations = {
     strategistEmptyStateMobile: "Describe your challenge to get started.",
     notEnoughData: "We don't have enough data about you yet. Try adding some journal entries first!",
     strategyUnavailableTitle: "Strategy unavailable",
-    strategyFailed: "Failed to generate solution. Check your API key and try again."
+    strategyFailed: "Failed to generate solution. Check your API key and try again.",
+
+    // UI Labels (previously hardcoded)
+    neuralStrategyEngine: "Neural Strategy Engine",
+    strategyOutput: "Strategy Output",
+    assemblingIntelligence: "Assembling Intelligence...",
+    processingIdentity: "Processing identity markers & patterns",
+    realTimeEvolution: "Real-time Evolution",
+    verifiedLogic: "Verified Logic",
+    optimized: "Optimized",
+    neuralSync: "Sync",
+    intelVerified: "Verified",
+    neuralMemoryBridge: "Neural Memory Bridge",
+    vibeIntelligence: "Vibe Intelligence",
+    existentialStrategistResult: "Existential Strategist Result",
+    strategyEmptyHint: "Provide a core challenge to begin strategic alignment with your unique capability profile.",
   },
   ko: {
     // Sidebar
@@ -371,7 +386,22 @@ export const translations = {
     strategistEmptyStateMobile: "고민을 적어주시면 전략 생성이 시작됩니다.",
     notEnoughData: "아직 데이터가 충분하지 않습니다. 일기를 먼저 몇 개 더 작성해 주세요!",
     strategyUnavailableTitle: "전략을 불러올 수 없습니다.",
-    strategyFailed: "전략 생성에 실패했습니다. API 키를 확인하고 다시 시도해 주세요."
+    strategyFailed: "전략 생성에 실패했습니다. API 키를 확인하고 다시 시도해 주세요.",
+
+    // UI Labels
+    neuralStrategyEngine: "신경 전략 엔진",
+    strategyOutput: "전략 결과",
+    assemblingIntelligence: "지능 조립 중...",
+    processingIdentity: "정체성 마커 및 패턴 처리 중",
+    realTimeEvolution: "실시간 진화",
+    verifiedLogic: "검증된 로직",
+    optimized: "최적화됨",
+    neuralSync: "동기화",
+    intelVerified: "검증됨",
+    neuralMemoryBridge: "신경 메모리 브릿지",
+    vibeIntelligence: "바이브 인텔리전스",
+    existentialStrategistResult: "실존 전략가 분석 결과",
+    strategyEmptyHint: "핵심 과제를 입력하면 개인 역량 프로필을 기반으로 전략 정렬이 시작됩니다.",
   }
 };
 

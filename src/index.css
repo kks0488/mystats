@@ -76,4 +76,9 @@
   .custom-scrollbar::-webkit-scrollbar-thumb {
     @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
   }
+
+  .journal-entry-item {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 120px;
+  }
 }

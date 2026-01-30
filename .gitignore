@@ -28,3 +28,11 @@ PROJECT_PORTS.md
 *.sln
 *.sw?
 .vercel
+
+# Agent/work logs
+.vc/
+.vibe/
+
+# Playwright
+playwright-report
+test-results

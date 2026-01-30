@@ -1,5 +1,5 @@
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase';
-import { getCloudSyncConfig, syncNow } from '@/lib/cloudSync';
+import { getCloudSyncConfig, syncNowWithRetry } from '@/lib/cloudSync';
 
 let started = false;
 let timer: number | null = null;
@@ -12,9 +12,9 @@ function scheduleSync(delayMs = 1500) {
     if (!config.enabled || !config.autoSync) return;
     void (async () => {
       try {
-        await syncNow();
-      } catch {
-        // ignore autosync errors (manual sync shows details)
+        await syncNowWithRetry();
+      } catch (error) {
+        console.debug('[CloudSync] auto-sync skipped:', error instanceof Error ? error.message : error);
       }
     })();
   }, delayMs);
@@ -53,4 +53,3 @@ export function startCloudSyncManager(): () => void {
     started = false;
   };
 }
-

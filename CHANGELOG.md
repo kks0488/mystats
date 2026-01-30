@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.6] - 2026-01-29
+
+### Added
+- **59 unit tests** for `fallback.ts` (CRUD, edge cases, limits, dedup, skill merging) — total 77 tests.
+- **Accessibility (A11y)**: `htmlFor`/`id` label connections, `aria-haspopup`/`aria-expanded`/`role="listbox"`/`role="option"` for custom dropdowns in Settings.
+- **Keyboard shortcut**: Ctrl+Enter (⌘+Enter) to save journal entries.
+- `aria-current="page"` on active nav item (Shell).
+- Creative feature ideation document (`docs/CREATIVE_IDEAS.md`).
+
+### Changed
+- Parallelize DB queries with `Promise.all()` in Home, Strategy, and Profile pages (removes async waterfall).
+- Wrap `uniqueArchetypes`, `uniquePatterns`, `uniqueQuestions` in `useMemo` (Profile page).
+- Replace `.reverse()` with `.toReversed()` in Journal to avoid array mutation.
+- Lazy-load `react-markdown` via `React.lazy()` in Strategy page (smaller initial bundle).
+- Add `content-visibility: auto` CSS to journal history items for scroll rendering optimization.
+- Wrap `localStorage` access in try-catch for Safari private mode safety (LanguageProvider, ai-provider).
+- Expand `isDbFailure()` to detect `VersionError` and `QuotaExceededError`.
+- Add `console.debug` logging to cloudSyncManager (was silent catch).
+- Replace `any` types in `db.ts` with concrete union types.
+- Upgrade tsconfig target/lib to ES2023.
+- Remove unused `clearFallbackData` import in Profile.
+
 ## [1.2.5] - 2026-01-27
 
 ### Fixed

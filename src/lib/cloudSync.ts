@@ -359,3 +359,42 @@ export async function syncNow(): Promise<{
   setCloudLastSyncedAt(Date.now());
   return { ok: true, appliedRemote, pushedLocal, mode: local.mode };
 }
+
+function isRetryableSyncMessage(message?: string): boolean {
+  const raw = (message || '').trim().toLowerCase();
+  if (!raw) return false;
+  if (raw.includes('not configured')) return false;
+  if (raw.includes('not signed in')) return false;
+  return (
+    raw.includes('failed to fetch') ||
+    raw.includes('network') ||
+    raw.includes('timeout') ||
+    raw.includes('timed out') ||
+    raw.includes('rate') ||
+    raw.includes('429') ||
+    raw.includes('500') ||
+    raw.includes('502') ||
+    raw.includes('503') ||
+    raw.includes('504')
+  );
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function syncNowWithRetry(options?: { attempts?: number; baseDelayMs?: number }): Promise<Awaited<ReturnType<typeof syncNow>>> {
+  const attempts = Math.max(1, Number(options?.attempts ?? 3));
+  const baseDelayMs = Math.max(50, Number(options?.baseDelayMs ?? 300));
+
+  let last: Awaited<ReturnType<typeof syncNow>> | null = null;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    last = await syncNow();
+    if (last.ok) return last;
+    if (last.mode === 'not_configured' || last.mode === 'signed_out') return last;
+    if (!isRetryableSyncMessage(last.message)) return last;
+    const delay = Math.min(2500, baseDelayMs * Math.pow(2, attempt));
+    await sleep(delay);
+  }
+  return last ?? { ok: false, appliedRemote: 0, pushedLocal: 0, mode: 'not_configured', message: 'Unknown error' };
+}

@@ -50,38 +50,56 @@ const STORAGE_KEYS = {
   model: (provider: AIProvider) => `${provider.toUpperCase()}_MODEL`,
 };
 
+function safeLocalStorageGet(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeLocalStorageSet(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // ignore
+  }
+}
+
 export const getProviderConfig = (provider: AIProvider): AIConfig => {
-  const apiKey =
-    localStorage.getItem(STORAGE_KEYS.apiKey(provider)) ||
-    (provider === 'gemini' ? localStorage.getItem('GEMINI_API_KEY') : '') ||
+  let apiKey = '';
+  let model = AI_PROVIDERS[provider].defaultModel;
+  apiKey =
+    safeLocalStorageGet(STORAGE_KEYS.apiKey(provider)) ||
+    (provider === 'gemini' ? safeLocalStorageGet('GEMINI_API_KEY') : '') ||
     '';
-  const model = localStorage.getItem(STORAGE_KEYS.model(provider)) || AI_PROVIDERS[provider].defaultModel;
+  model = safeLocalStorageGet(STORAGE_KEYS.model(provider)) || model;
 
   return { provider, apiKey, model };
 };
 
 export const getAIConfig = (): AIConfig => {
-  const provider = (localStorage.getItem(STORAGE_KEYS.provider) as AIProvider) || 'gemini';
+  const provider = (safeLocalStorageGet(STORAGE_KEYS.provider) as AIProvider) || 'gemini';
   return getProviderConfig(provider);
 };
 
 export const setAIConfig = (config: Partial<AIConfig>) => {
   if (config.provider) {
-    localStorage.setItem(STORAGE_KEYS.provider, config.provider);
+    safeLocalStorageSet(STORAGE_KEYS.provider, config.provider);
   }
   
   const provider = config.provider || getAIConfig().provider;
   
   if (config.apiKey !== undefined) {
-    localStorage.setItem(STORAGE_KEYS.apiKey(provider), config.apiKey);
+    safeLocalStorageSet(STORAGE_KEYS.apiKey(provider), config.apiKey);
     // Backward compatibility for Gemini
     if (provider === 'gemini') {
-      localStorage.setItem('GEMINI_API_KEY', config.apiKey);
+      safeLocalStorageSet('GEMINI_API_KEY', config.apiKey);
     }
   }
   
   if (config.model) {
-    localStorage.setItem(STORAGE_KEYS.model(provider), config.model);
+    safeLocalStorageSet(STORAGE_KEYS.model(provider), config.model);
   }
 };
 

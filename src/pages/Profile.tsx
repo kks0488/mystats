@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { 
   getDB, 
   upsertSkill,
@@ -24,16 +24,16 @@ import type { LucideIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '../hooks/useLanguage';
-import { cn } from '@/lib/utils';
+import { cn, normalizeSkillName } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { analyzeEntryWithAI, checkAIStatus } from '../lib/ai-provider';
+import { useDbRecovery } from '../hooks/useDbRecovery';
 import {
   loadFallbackSkills,
   loadFallbackInsights,
   loadFallbackJournalEntries,
   upsertFallbackSkill,
   addFallbackInsight,
-  clearFallbackData,
   clearFallbackSkills,
   clearFallbackInsights,
 } from '../db/fallback';
@@ -41,14 +41,6 @@ import {
 interface SkillSummary extends Skill {
     count: number;
 }
-
-const normalizeSkillName = (value: string) =>
-    value
-        .trim()
-        .replace(/\s+/g, ' ')
-        .replace(/^["'`]+|["'`]+$/g, '')
-        .replace(/[.!?;:]+$/g, '')
-        .toLowerCase();
 
 const aggregateSkills = (items: Skill[]): SkillSummary[] => {
     const map = new Map<string, { skill: Skill; sourceIds: Set<string> }>();
@@ -103,52 +95,20 @@ export const Profile = () => {
     const [showAllArchetypes, setShowAllArchetypes] = useState(false);
     const [showAllPatterns, setShowAllPatterns] = useState(false);
     const [showAllQuestions, setShowAllQuestions] = useState(false);
-    const migrationInProgress = useRef(false);
 
-    const maybeRecoverFallbackData = useCallback(async (db: Awaited<ReturnType<typeof getDB>>) => {
-        if (migrationInProgress.current) return false;
-        const fallbackEntries = loadFallbackJournalEntries();
-        const fallbackSkills = loadFallbackSkills();
-        const fallbackInsights = loadFallbackInsights();
-        if (!fallbackEntries.length && !fallbackSkills.length && !fallbackInsights.length) return false;
-        migrationInProgress.current = true;
-        setDbNotice(t('dbRecovering'));
-        try {
-            const tx = db.transaction(['journal', 'skills', 'insights'], 'readwrite');
-            const journalStore = tx.objectStore('journal');
-            const skillStore = tx.objectStore('skills');
-            const insightStore = tx.objectStore('insights');
-
-            for (const entry of fallbackEntries) {
-                await journalStore.put(entry);
-            }
-            for (const skill of fallbackSkills) {
-                await skillStore.put(skill);
-            }
-            for (const insight of fallbackInsights) {
-                await insightStore.put(insight);
-            }
-
-            await tx.done;
-            clearFallbackData();
-            setDbNotice(t('dbRecovered'));
-            setTimeout(() => setDbNotice(null), 4000);
-            return true;
-        } catch (error) {
-            console.warn('Failed to recover fallback profile data', error);
-            setDbNotice(t('dbProfileFallback'));
-            return false;
-        } finally {
-            migrationInProgress.current = false;
-        }
+    const profileFallbackNotice = useCallback(() => {
+        setDbNotice(t('dbProfileFallback'));
     }, [t]);
+    const { maybeRecoverFallbackData } = useDbRecovery(setDbNotice, profileFallbackNotice);
 
     const loadData = useCallback(async () => {
         try {
             const db = await getDB();
             const recovered = await maybeRecoverFallbackData(db);
-            const allSkills = await db.getAll('skills');
-            const allInsights = await db.getAll('insights');
+            const [allSkills, allInsights] = await Promise.all([
+                db.getAll('skills'),
+                db.getAll('insights'),
+            ]);
             setSkills(allSkills);
             setInsights(allInsights);
             setDbNotice(null);
@@ -278,7 +238,7 @@ export const Profile = () => {
         loadData();
     }, [loadData]);
 
-    const safeInsights = Array.isArray(insights) ? insights : [];
+    const safeInsights = useMemo(() => (Array.isArray(insights) ? insights : []), [insights]);
 
     const grouped = useMemo(() => {
         const list = Array.isArray(skills) ? skills : [];
@@ -291,9 +251,18 @@ export const Profile = () => {
         };
     }, [skills]);
 
-    const uniqueArchetypes = Array.from(new Set(safeInsights.flatMap(i => i.archetypes || []))).map(a => a?.trim()).filter(Boolean);
-    const uniquePatterns = Array.from(new Set(safeInsights.flatMap(i => i.hiddenPatterns || []))).map(p => p?.trim()).filter(Boolean);
-    const uniqueQuestions = Array.from(new Set(safeInsights.flatMap(i => i.criticalQuestions || []))).map(q => q?.trim()).filter(Boolean);
+    const uniqueArchetypes = useMemo(() =>
+        Array.from(new Set(safeInsights.flatMap(i => i.archetypes || []))).map(a => a?.trim()).filter(Boolean),
+        [safeInsights]
+    );
+    const uniquePatterns = useMemo(() =>
+        Array.from(new Set(safeInsights.flatMap(i => i.hiddenPatterns || []))).map(p => p?.trim()).filter(Boolean),
+        [safeInsights]
+    );
+    const uniqueQuestions = useMemo(() =>
+        Array.from(new Set(safeInsights.flatMap(i => i.criticalQuestions || []))).map(q => q?.trim()).filter(Boolean),
+        [safeInsights]
+    );
     const listLimit = 10;
     const visibleArchetypes = showAllArchetypes ? uniqueArchetypes : uniqueArchetypes.slice(0, listLimit);
     const visiblePatterns = showAllPatterns ? uniquePatterns : uniquePatterns.slice(0, listLimit);
@@ -348,7 +317,7 @@ export const Profile = () => {
                                          <div className="space-y-2">
                                              <div className="flex items-center gap-2 text-primary font-mono text-[10px] font-black uppercase tracking-[0.4em]">
                                                  <Cpu className="w-3 h-3" />
-                                                 Existential Strategist Result
+                                                 {t('existentialStrategistResult')}
                                              </div>
                                              <h2 className="text-4xl font-black tracking-tighter text-foreground italic">
                                                  {safeInsights[safeInsights.length - 1].archetypes?.[0] || "Root Consciousness"}
