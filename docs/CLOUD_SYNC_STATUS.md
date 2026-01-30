@@ -13,6 +13,10 @@
 - 단계 D: 로컬 `.env` 연결( `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` ) ⏸ 대기
 - 단계 E: 앱에서 로그인/Sync 테스트 ⏸ 대기
 
+추가 확인:
+- 현재 `/.env.local`은 Supabase가 `localhost:54322`로 잡혀 있어 **Cloud 프로젝트가 아니라 로컬 Supabase를 바라보고 있는 상태**다.
+  - Cloud Sync를 Supabase Cloud로 테스트하려면 `VITE_SUPABASE_URL`을 `<project-ref>.supabase.co`로 변경해야 한다.
+
 ---
 
 ## 막힌 지점
@@ -64,4 +68,3 @@
 - 구현 코드:
   - Supabase client: `src/lib/supabase.ts`
   - Sync 로직: `src/lib/cloudSync.ts`
-
