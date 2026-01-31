@@ -14,6 +14,11 @@ All notable changes to this project will be documented in this file.
 ### Docs
 - Added Vercel deployment debugging notes + a small script to detect whether production serves the “old vs new” Cloud Sync bundle.
 
+## [1.2.8] - 2026-01-31
+
+### Fixed
+- Cloud Sync now treats a session as “signed in” even when the OAuth provider doesn’t return an email (common for GitHub), and shows a safe fallback identifier instead.
+
 ## [1.2.6] - 2026-01-29
 
 ### Added

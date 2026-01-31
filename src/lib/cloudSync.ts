@@ -236,6 +236,28 @@ export async function getCloudUserEmail(): Promise<string | null> {
   return typeof email === 'string' ? email : null;
 }
 
+export type CloudUserInfo = {
+  id: string;
+  email: string | null;
+  provider: string | null;
+};
+
+export async function getCloudUserInfo(): Promise<CloudUserInfo | null> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return null;
+  const { data } = await supabase.auth.getSession();
+  const user = data.session?.user;
+  if (!user?.id) return null;
+
+  const email = typeof user.email === 'string' ? user.email : null;
+  const provider =
+    typeof (user.app_metadata as Record<string, unknown> | null | undefined)?.provider === 'string'
+      ? ((user.app_metadata as Record<string, unknown>).provider as string)
+      : null;
+
+  return { id: user.id, email, provider };
+}
+
 export async function syncNow(): Promise<{
   ok: boolean;
   appliedRemote: number;

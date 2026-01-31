@@ -11,7 +11,7 @@ import {
   cloudSignUpWithPassword,
   getCloudLastSyncedAt,
   getCloudSyncConfig,
-  getCloudUserEmail,
+  getCloudUserInfo,
   setCloudSyncConfig,
   syncNowWithRetry,
 } from '@/lib/cloudSync';
@@ -22,7 +22,7 @@ export function CloudSyncCard() {
   const [cloudConfigured, setCloudConfigured] = useState(false);
   const [cloudEmail, setCloudEmail] = useState('');
   const [cloudPassword, setCloudPassword] = useState('');
-  const [cloudUserEmail, setCloudUserEmail] = useState<string | null>(null);
+  const [cloudUser, setCloudUser] = useState<{ id: string; email: string | null; provider: string | null } | null>(null);
   const [cloudEnabled, setCloudEnabled] = useState(false);
   const [cloudAutoSync, setCloudAutoSync] = useState(true);
   const [cloudLastSyncedAt, setCloudLastSyncedAt] = useState<number | null>(null);
@@ -43,11 +43,22 @@ export function CloudSyncCard() {
 
     if (!isSupabaseConfigured()) return;
 
-    void getCloudUserEmail().then(setCloudUserEmail);
+    void getCloudUserInfo().then(setCloudUser);
     const supabase = getSupabaseClient();
     const { data } =
       supabase?.auth.onAuthStateChange((_event, session) => {
-        setCloudUserEmail(session?.user?.email ?? null);
+        const user = session?.user;
+        if (!user?.id) {
+          setCloudUser(null);
+          setAuthLoading(false);
+          return;
+        }
+        const email = typeof user.email === 'string' ? user.email : null;
+        const provider =
+          typeof (user.app_metadata as Record<string, unknown> | null | undefined)?.provider === 'string'
+            ? ((user.app_metadata as Record<string, unknown>).provider as string)
+            : null;
+        setCloudUser({ id: user.id, email, provider });
         setAuthLoading(false);
       }) ?? { data: null };
     return () => {
@@ -105,7 +116,7 @@ export function CloudSyncCard() {
     setCloudMessage(null);
     setCloudStatus('idle');
     await cloudSignOut();
-    setCloudUserEmail(null);
+    setCloudUser(null);
   }, []);
 
   const handleCloudSyncNow = useCallback(async () => {
@@ -143,12 +154,14 @@ export function CloudSyncCard() {
           <p className="text-sm text-muted-foreground leading-relaxed">{t('cloudNotConfigured')}</p>
         ) : (
           <>
-            {cloudUserEmail ? (
+            {cloudUser ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-border bg-background/40">
                   <div className="space-y-0.5">
                     <p className="text-sm font-bold">{t('cloudSignedInAs')}</p>
-                    <p className="text-xs text-muted-foreground">{cloudUserEmail}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {cloudUser.email ?? `${cloudUser.provider ?? 'user'}:${cloudUser.id.slice(0, 8)}…`}
+                    </p>
                   </div>
                   <Button variant="outline" onClick={handleCloudSignOut} className="h-10 px-4 rounded-xl font-bold">
                     {t('cloudSignOut')}
