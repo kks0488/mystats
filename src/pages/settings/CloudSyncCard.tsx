@@ -30,6 +30,17 @@ export function CloudSyncCard() {
   const [cloudMessage, setCloudMessage] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
 
+  const oauthProviders = useMemo(() => {
+    const raw = (import.meta.env.VITE_CLOUD_OAUTH_PROVIDERS as string | undefined) || 'google';
+    const parsed = raw
+      .split(',')
+      .map((p) => p.trim().toLowerCase())
+      .filter(Boolean);
+    const allowed = new Set(['google', 'github']);
+    const normalized = Array.from(new Set(parsed.filter((p) => allowed.has(p))));
+    return normalized as Array<'google' | 'github'>;
+  }, []);
+
   const canSubmitPassword = useMemo(() => {
     return Boolean(cloudEmail.trim() && cloudPassword);
   }, [cloudEmail, cloudPassword]);
@@ -220,21 +231,25 @@ export function CloudSyncCard() {
             ) : (
               <div className="space-y-3">
                 <div className="space-y-3">
-                  <Button
-                    onClick={() => handleOAuthSignIn('google')}
-                    disabled={authLoading}
-                    className="w-full h-12 rounded-xl font-bold tracking-tight"
-                  >
-                    {t('cloudSignInGoogle')}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleOAuthSignIn('github')}
-                    disabled={authLoading}
-                    className="w-full h-12 rounded-xl font-bold tracking-tight"
-                  >
-                    {t('cloudSignInGithub')}
-                  </Button>
+                  {oauthProviders.includes('google') && (
+                    <Button
+                      onClick={() => handleOAuthSignIn('google')}
+                      disabled={authLoading}
+                      className="w-full h-12 rounded-xl font-bold tracking-tight"
+                    >
+                      {t('cloudSignInGoogle')}
+                    </Button>
+                  )}
+                  {oauthProviders.includes('github') && (
+                    <Button
+                      variant="outline"
+                      onClick={() => handleOAuthSignIn('github')}
+                      disabled={authLoading}
+                      className="w-full h-12 rounded-xl font-bold tracking-tight"
+                    >
+                      {t('cloudSignInGithub')}
+                    </Button>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-3 py-2">

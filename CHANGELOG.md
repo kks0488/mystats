@@ -19,6 +19,9 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - Cloud Sync now treats a session as “signed in” even when the OAuth provider doesn’t return an email (common for GitHub), and shows a safe fallback identifier instead.
 
+### Changed
+- Cloud Sync sign-in buttons can be limited via `VITE_CLOUD_OAUTH_PROVIDERS` (defaults to Google-only).
+
 ## [1.2.6] - 2026-01-29
 
 ### Added

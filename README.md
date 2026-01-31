@@ -106,7 +106,7 @@ If you sign in, you can sync your data across devices via Supabase.
 
 Current sign-in methods:
 - Google OAuth
-- GitHub OAuth
+- GitHub OAuth (optional)
 - Email + Password
 
 Notes:

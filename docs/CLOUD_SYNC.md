@@ -20,6 +20,9 @@ Make sure your Supabase Auth settings allow redirects to:
 If you use OAuth (Google/GitHub), also enable the providers in Supabase:
 - Supabase Dashboard → Authentication → Providers → enable Google / GitHub
 
+If you only want Google, you can keep GitHub disabled and (optionally) set:
+- `VITE_CLOUD_OAUTH_PROVIDERS=google`
+
 ## 3) Configure env vars (Vercel + local)
 
 Create `.env` from `.env.example` and fill:
