@@ -2,6 +2,7 @@
 set -euo pipefail
 
 URL="${1:-https://mystats-eta.vercel.app/}"
+ORIGIN="$(printf '%s' "${URL}" | sed -E 's@^(https?://[^/]+).*@\1@')"
 
 if ! command -v curl >/dev/null 2>&1; then
   echo "Error: curl is required." >&2
@@ -23,9 +24,9 @@ if [[ -z "${JS_PATH}" ]]; then
 fi
 
 if [[ "${JS_PATH}" == /* ]]; then
-  JS_URL="${URL%/}${JS_PATH}"
+  JS_URL="${ORIGIN}${JS_PATH}"
 else
-  JS_URL="${URL%/}/${JS_PATH}"
+  JS_URL="${ORIGIN}/${JS_PATH}"
 fi
 
 echo "URL: ${URL}"
