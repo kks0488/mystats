@@ -8,8 +8,8 @@ function base64UrlDecode(input: string): string {
   const padding = '='.repeat((4 - (normalized.length % 4)) % 4);
   const base64 = `${normalized}${padding}`;
 
-  if (typeof atob === 'function') return atob(base64);
-  return Buffer.from(base64, 'base64').toString('utf-8');
+  if (typeof atob !== 'function') throw new Error('atob is not available in this environment.');
+  return atob(base64);
 }
 
 function getJwtRole(key: string): string | null {
