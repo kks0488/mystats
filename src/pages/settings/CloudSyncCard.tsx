@@ -28,6 +28,7 @@ export function CloudSyncCard() {
   const [cloudLastSyncedAt, setCloudLastSyncedAt] = useState<number | null>(null);
   const [cloudStatus, setCloudStatus] = useState<'idle' | 'syncing' | 'ok' | 'fail'>('idle');
   const [cloudMessage, setCloudMessage] = useState<string | null>(null);
+  const [cloudDebugLine, setCloudDebugLine] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
 
   const oauthProviders = useMemo(() => {
@@ -61,6 +62,18 @@ export function CloudSyncCard() {
     },
     [t]
   );
+
+  const buildCloudStateLine = useCallback(() => {
+    const on = t('cloudDebugOn');
+    const off = t('cloudDebugOff');
+    const signed = cloudUser ? t('cloudDebugSignedIn') : t('cloudDebugSignedOut');
+    const enabled = cloudEnabled ? on : off;
+    const auto = cloudAutoSync ? on : off;
+    const last = cloudLastSyncedAt ? new Date(cloudLastSyncedAt).toLocaleString() : t('cloudDebugNever');
+    return `${t('cloudDebugState')}: ${signed} · ${t('cloudDebugEnabled')}: ${enabled} · ${t('cloudDebugAutoSync')}: ${auto} · ${t(
+      'cloudDebugLastSynced'
+    )}: ${last}`;
+  }, [cloudAutoSync, cloudEnabled, cloudLastSyncedAt, cloudUser, t]);
 
   const canSubmitPassword = useMemo(() => {
     return Boolean(cloudEmail.trim() && cloudPassword);
@@ -153,6 +166,7 @@ export function CloudSyncCard() {
 
   const handleCloudSyncNow = useCallback(async () => {
     setCloudMessage(null);
+    setCloudDebugLine(null);
     setCloudStatus('syncing');
     try {
       const result = await syncNowWithRetry();
@@ -163,12 +177,14 @@ export function CloudSyncCard() {
       } else {
         setCloudStatus('fail');
         setCloudMessage(formatCloudError(result.message));
+        setCloudDebugLine(buildCloudStateLine());
       }
     } catch (err) {
       setCloudStatus('fail');
       setCloudMessage(formatCloudError(err instanceof Error ? err.message : null));
+      setCloudDebugLine(buildCloudStateLine());
     }
-  }, [formatCloudError, t]);
+  }, [buildCloudStateLine, formatCloudError, t]);
 
   return (
     <Card className="bg-secondary/20 border-border backdrop-blur-xl rounded-[2rem] overflow-hidden">
@@ -331,7 +347,7 @@ export function CloudSyncCard() {
             )}
 
             <div className="text-xs text-muted-foreground space-y-1">
-              {cloudLastSyncedAt && (
+              {cloudLastSyncedAt && !cloudDebugLine && (
                 <p>
                   {t('cloudLastSynced')}: {new Date(cloudLastSyncedAt).toLocaleString()}
                 </p>
@@ -341,6 +357,7 @@ export function CloudSyncCard() {
                   {cloudMessage}
                 </p>
               )}
+              {cloudDebugLine && <p className="text-[11px] text-muted-foreground break-words">{cloudDebugLine}</p>}
             </div>
           </>
         )}

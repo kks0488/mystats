@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.10] - 2026-02-02
+
+### Changed
+- When "Sync now" fails, Cloud Sync shows a 1-line state summary (signed-in / enabled / auto sync / last synced) to speed up debugging.
+
 ## [1.2.9] - 2026-02-02
 
 ### Changed
