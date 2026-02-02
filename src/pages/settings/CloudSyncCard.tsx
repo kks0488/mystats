@@ -41,6 +41,27 @@ export function CloudSyncCard() {
     return normalized as Array<'google' | 'github'>;
   }, []);
 
+  const formatCloudError = useCallback(
+    (message?: string | null) => {
+      const raw = (message || '').trim();
+      if (!raw) return t('cloudSyncFail');
+      const m = raw.toLowerCase();
+
+      if (m.includes('not signed in')) return t('cloudErrNotSignedIn');
+      if (m.includes('invalid api key')) return t('cloudErrInvalidKey');
+      if (m.includes('jwt expired') || m.includes('invalid jwt') || m.includes('token has expired')) return t('cloudErrAuthExpired');
+      if (m.includes('failed to fetch') || m.includes('network') || m.includes('timeout') || m.includes('timed out'))
+        return t('cloudErrNetwork');
+      if (m.includes('mystats_items') && m.includes('does not exist')) return t('cloudErrMissingTable');
+      if (m.includes('row level security') || m.includes('row-level security') || m.includes('violates row-level security'))
+        return t('cloudErrRls');
+      if (m.includes('permission denied') && m.includes('mystats_items')) return t('cloudErrPermissionDenied');
+
+      return raw;
+    },
+    [t]
+  );
+
   const canSubmitPassword = useMemo(() => {
     return Boolean(cloudEmail.trim() && cloudPassword);
   }, [cloudEmail, cloudPassword]);
@@ -86,10 +107,10 @@ export function CloudSyncCard() {
       if (!result.ok) {
         setAuthLoading(false);
         setCloudStatus('fail');
-        setCloudMessage(result.message || t('cloudSyncFail'));
+        setCloudMessage(formatCloudError(result.message));
       }
     },
-    [t]
+    [formatCloudError]
   );
 
   const handlePasswordSignIn = useCallback(async () => {
@@ -104,8 +125,8 @@ export function CloudSyncCard() {
       return;
     }
     setCloudStatus('fail');
-    setCloudMessage(result.message || t('cloudSyncFail'));
-  }, [canSubmitPassword, cloudEmail, cloudPassword, t]);
+    setCloudMessage(formatCloudError(result.message));
+  }, [canSubmitPassword, cloudEmail, cloudPassword, formatCloudError]);
 
   const handlePasswordSignUp = useCallback(async () => {
     if (!canSubmitPassword) return;
@@ -120,8 +141,8 @@ export function CloudSyncCard() {
       return;
     }
     setCloudStatus('fail');
-    setCloudMessage(result.message || t('cloudSyncFail'));
-  }, [canSubmitPassword, cloudEmail, cloudPassword, t]);
+    setCloudMessage(formatCloudError(result.message));
+  }, [canSubmitPassword, cloudEmail, cloudPassword, formatCloudError, t]);
 
   const handleCloudSignOut = useCallback(async () => {
     setCloudMessage(null);
@@ -141,13 +162,13 @@ export function CloudSyncCard() {
         setCloudMessage(`${t('cloudSyncOk')} · ${result.appliedRemote}↓ ${result.pushedLocal}↑`);
       } else {
         setCloudStatus('fail');
-        setCloudMessage(result.message || t('cloudSyncFail'));
+        setCloudMessage(formatCloudError(result.message));
       }
     } catch (err) {
       setCloudStatus('fail');
-      setCloudMessage(err instanceof Error ? err.message : t('cloudSyncFail'));
+      setCloudMessage(formatCloudError(err instanceof Error ? err.message : null));
     }
-  }, [t]);
+  }, [formatCloudError, t]);
 
   return (
     <Card className="bg-secondary/20 border-border backdrop-blur-xl rounded-[2rem] overflow-hidden">

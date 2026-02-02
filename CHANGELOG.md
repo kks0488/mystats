@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.9] - 2026-02-02
+
+### Changed
+- Cloud Sync failures now show more actionable guidance (network vs. missing table vs. RLS/permission vs. auth issues).
+
+### Security
+- Guard against accidentally using Supabase `service_role` / secret keys in client-side env (refuse to initialize + refuse to upload via script).
+
+## [1.2.8] - 2026-01-31
+
+### Fixed
+- Cloud Sync now treats a session as “signed in” even when the OAuth provider doesn’t return an email (common for GitHub), and shows a safe fallback identifier instead.
+
+### Changed
+- Cloud Sync sign-in buttons can be limited via `VITE_CLOUD_OAUTH_PROVIDERS` (defaults to Google-only).
+
 ## [1.2.7] - 2026-01-30
 
 ### Changed
@@ -13,14 +29,6 @@ All notable changes to this project will be documented in this file.
 
 ### Docs
 - Added Vercel deployment debugging notes + a small script to detect whether production serves the “old vs new” Cloud Sync bundle.
-
-## [1.2.8] - 2026-01-31
-
-### Fixed
-- Cloud Sync now treats a session as “signed in” even when the OAuth provider doesn’t return an email (common for GitHub), and shows a safe fallback identifier instead.
-
-### Changed
-- Cloud Sync sign-in buttons can be limited via `VITE_CLOUD_OAUTH_PROVIDERS` (defaults to Google-only).
 
 ## [1.2.6] - 2026-01-29
 
