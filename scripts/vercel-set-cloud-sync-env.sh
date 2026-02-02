@@ -33,6 +33,26 @@ if [[ -z "${VITE_SUPABASE_ANON_KEY}" ]]; then
   echo
 fi
 
+if [[ "${VITE_SUPABASE_ANON_KEY}" == sb_secret_* ]]; then
+  echo "Refusing to set a Supabase secret key (sb_secret_*) on Vercel client env. Use a public anon/publishable key instead." >&2
+  exit 1
+fi
+
+if [[ "${VITE_SUPABASE_ANON_KEY}" == eyJ*.*.* ]]; then
+  payload_segment="$(printf '%s' "${VITE_SUPABASE_ANON_KEY}" | cut -d. -f2)"
+  base64url_decoded="$(
+    printf '%s' "${payload_segment}" \
+      | tr '_-' '/+' \
+      | awk '{pad = (4 - (length($0) % 4)) % 4; printf "%s%s", $0, substr("====", 1, pad)}' \
+      | base64 -d 2>/dev/null \
+      || true
+  )"
+  if [[ "${base64url_decoded}" == *\"role\":\"service_role\"* ]]; then
+    echo "Refusing to set a Supabase service_role JWT on Vercel client env. Use a public anon/publishable key instead." >&2
+    exit 1
+  fi
+fi
+
 if [[ "${VITE_SUPABASE_URL}" == *localhost* || "${VITE_SUPABASE_URL}" == *127.0.0.1* ]]; then
   if [[ "${ALLOW_LOCALHOST:-0}" != "1" ]]; then
     echo "Refusing localhost URL for Vercel. Use a hosted Supabase URL (or set ALLOW_LOCALHOST=1 to override)." >&2

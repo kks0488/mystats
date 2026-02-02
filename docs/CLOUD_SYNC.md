@@ -29,6 +29,8 @@ Create `.env` from `.env.example` and fill:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
+  - Use a **public** client key (anon / publishable).
+  - Do **not** use `sb_secret_*` or any `service_role` key in the browser.
 
 For Vercel:
 
