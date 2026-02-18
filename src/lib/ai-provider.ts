@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import OpenAI from 'openai';
 
 // --- Types ---
 
@@ -17,10 +18,10 @@ export interface AIConfig {
 
 export const AI_PROVIDERS: Record<AIProvider, { name: string; models: string[]; defaultModel: string; apiUrl: string }> = {
   gemini: {
-    name: 'Google Gemini',
-    models: ['gemini-3-flash-preview', 'gemini-3-pro-preview', 'gemini-2.5-flash', 'gemini-2.5-pro'],
-    defaultModel: 'gemini-3-flash-preview',
-    apiUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    name: 'Gemini (OpenAI Gateway)',
+    models: ['gpt-5.2', 'gpt-5', 'gpt-5-mini', 'gpt-4o', 'gpt-4o-mini'],
+    defaultModel: 'gpt-5.2',
+    apiUrl: 'http://localhost:8317/v1',
   },
   openai: {
     name: 'OpenAI',
@@ -125,10 +126,14 @@ All output must be English only. Do NOT include Korean.`;
     language === 'ko'
       ? "String (Format: '당신의 존재는... (Your existence is...)')"
       : 'String (English only)';
-  const questionFormat =
-    language === 'ko'
-      ? "String (Format: '한글 질문? (English Question?)')"
-      : 'String (English only)';
+	const questionFormat =
+	  language === 'ko'
+	    ? "String (Format: '한글 질문? (English Question?)')"
+	    : 'String (English only)';
+	const evidenceFormat =
+	  language === 'ko'
+	    ? "String (Direct quote from the input text; keep the original language)"
+	    : 'String (Direct quote from the input text)';
 
   return `
 You are an Existential Strategist and Meta-Cognitive Profiler.
@@ -157,25 +162,29 @@ Analyze the text and return a JSON object with this EXACT structure:
   "experiences": [ { "name": "String", "category": "experience" } ],
   "interests": [ { "name": "String", "category": "interest" } ],
   "traits": [ { "name": "String", "category": "trait" | "strength" | "weakness" } ],
-  "insight": {
-    "archetypes": [
-      "${archetypeFormat}"
-    ],
-    "hiddenPatterns": [
-      "${patternFormat}"
-    ],
-    "criticalQuestions": [
-      "${questionFormat}"
-    ]
-  }
-}
+	  "insight": {
+	    "archetypes": [
+	      "${archetypeFormat}"
+	    ],
+	    "hiddenPatterns": [
+	      "${patternFormat}"
+	    ],
+	    "criticalQuestions": [
+	      "${questionFormat}"
+	    ],
+	    "evidenceQuotes": [
+	      "${evidenceFormat}"
+	    ]
+	  }
+	}
 
-Be RUTHLESSLY META-ANALYTICAL. Do not settle for surface-level traits.
-Target the "Silent Core"—the part of the user that remains unchanged.
+	Be RUTHLESSLY META-ANALYTICAL. Do not settle for surface-level traits.
+	Target the "Silent Core"—the part of the user that remains unchanged.
+	For "evidenceQuotes", include up to 5 short quotes that are directly supported by the input text (verbatim).
 
-Language: ${languageDirective}
-`;
-};
+	Language: ${languageDirective}
+	`;
+	};
 
 export const STRATEGY_PROMPT = `
 You are "The Strategist", a ruthless but supportive AI mentor.
@@ -224,11 +233,12 @@ const TraitSchema = z.object({
   category: z.enum(["trait", "strength", "weakness"]),
 });
 
-const InsightSchema = z.object({
-  archetypes: z.array(z.string()).optional().default([]),
-  hiddenPatterns: z.array(z.string()).optional().default([]),
-  criticalQuestions: z.array(z.string()).optional().default([]),
-});
+	const InsightSchema = z.object({
+	  archetypes: z.array(z.string()).optional().default([]),
+	  hiddenPatterns: z.array(z.string()).optional().default([]),
+	  criticalQuestions: z.array(z.string()).optional().default([]),
+	  evidenceQuotes: z.array(z.string()).optional().default([]),
+	});
 
 export const AnalysisResultSchema = z.object({
   skills: z.array(SkillSchema).default([]),
@@ -243,11 +253,40 @@ export type AnalysisResult = z.infer<typeof AnalysisResultSchema>;
 // --- API Calls ---
 
 const callGemini = async (prompt: string, apiKey: string, model: string): Promise<string> => {
-  const { GoogleGenerativeAI } = await import('@google/generative-ai');
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const geminiModel = genAI.getGenerativeModel({ model });
-  const result = await geminiModel.generateContent(prompt);
-  return result.response.text();
+  try {
+    const openai = new OpenAI({
+      apiKey:
+        (typeof process !== 'undefined' && process?.env?.OPENAI_API_KEY) ||
+        apiKey,
+      baseURL: 'http://localhost:8317/v1',
+      dangerouslyAllowBrowser: true,
+    });
+
+    const response = await openai.chat.completions.create({
+      model:
+        (typeof process !== 'undefined' && process?.env?.OPENAI_MODEL) ||
+        model ||
+        'gpt-5.2',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+    });
+
+    const content: unknown = response.choices?.[0]?.message?.content;
+    if (typeof content === 'string') return content;
+    if (Array.isArray(content)) {
+      const text = (content as Array<{ type?: string; text?: string }>)
+        .map((item) => (item?.type === 'text' ? item.text || '' : ''))
+        .join('');
+      if (text) return text;
+    }
+    throw new Error('OpenAI returned empty content');
+  } catch {
+    const { GoogleGenerativeAI } = await import('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const geminiModel = genAI.getGenerativeModel({ model });
+    const result = await geminiModel.generateContent(prompt);
+    return result.response.text();
+  }
 };
 
 const callOpenAI = async (prompt: string, apiKey: string, model: string): Promise<string> => {
@@ -355,18 +394,19 @@ export const analyzeEntryWithAI = async (text: string, language: 'en' | 'ko' = '
     const parsed = JSON.parse(cleanedText);
     const validated = AnalysisResultSchema.parse(parsed);
     
-    return {
-      skills: validated.skills.map(s => ({ ...s, name: s.name.trim() })),
-      experiences: validated.experiences.map(e => ({ ...e, name: e.name.trim() })),
-      interests: validated.interests.map(i => ({ ...i, name: i.name.trim() })),
-      traits: validated.traits.map(t => ({ ...t, name: t.name.trim() })),
-      insight: validated.insight ? {
-        archetypes: validated.insight.archetypes.map(a => a.trim()),
-        hiddenPatterns: validated.insight.hiddenPatterns.map(p => p.trim()),
-        criticalQuestions: validated.insight.criticalQuestions.map(q => q.trim()),
-      } : undefined
-    };
-  } catch (error) {
+	    return {
+	      skills: validated.skills.map(s => ({ ...s, name: s.name.trim() })),
+	      experiences: validated.experiences.map(e => ({ ...e, name: e.name.trim() })),
+	      interests: validated.interests.map(i => ({ ...i, name: i.name.trim() })),
+	      traits: validated.traits.map(t => ({ ...t, name: t.name.trim() })),
+	      insight: validated.insight ? {
+	        archetypes: validated.insight.archetypes.map(a => a.trim()),
+	        hiddenPatterns: validated.insight.hiddenPatterns.map(p => p.trim()),
+	        criticalQuestions: validated.insight.criticalQuestions.map(q => q.trim()),
+	        evidenceQuotes: validated.insight.evidenceQuotes.map(q => q.trim()).filter(Boolean),
+	      } : undefined
+	    };
+	  } catch (error) {
     console.error("Error analyzing entry:", error);
     if (error instanceof z.ZodError) {
       console.error("Validation Failed:", error.issues);
