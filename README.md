@@ -13,12 +13,6 @@
 </p>
 
 <p align="center">
-  <em>Model lineage: drafted with Gemini, refined with Claude Opus 4.5, finalized with GPT-5.2 Codex.</em>
-  <br/>
-  <em>모델 흐름: Gemini로 초안, Claude Opus 4.5로 다듬고, GPT-5.2 Codex로 마무리.</em>
-</p>
-
-<p align="center">
   <a href="#features"><strong>Features</strong></a> ·
   <a href="#3-step-usage-guide"><strong>3-Step Guide</strong></a> ·
   <a href="#demo"><strong>Demo</strong></a> ·
@@ -68,6 +62,9 @@ Write freely. Our AI doesn't just save — it **decodes**. Every entry is analyz
 - Personality Traits & Patterns
 - Hidden Archetypes (e.g., "The Architect of Systems" 시스템의 설계자)
 - Critical Questions you should be asking yourself
+- **Journal Explorer**: search + multi-filter (date range, entry type, has-insight, skill categories)
+- **Draft Auto-Save**: automatic draft preservation and restore with notification
+- Ctrl+Enter (Cmd+Enter) keyboard shortcut to save
 
 ### 🧠 **memU Memory System (Embedded)**
 MyStats now includes a built-in **memU-compatible memory layer**:
@@ -85,9 +82,10 @@ Bring your own API key and choose your brain:
 ### 🪞 **Deep Intelligence Profile**
 Your cumulative psychological map — built from every journal entry. See:
 - Existential Archetypes
-- Hidden Behavioral Patterns  
+- Hidden Behavioral Patterns
 - Critical Life Questions
 - Skill & Interest Radar
+- **Rebuild AI Profile**: one-click reanalysis of all journal entries to regenerate skills and insights
 
 ### ⚡ **Neural Strategy Engine**
 Describe a problem. Get a **ruthlessly personalized solution**:
@@ -95,6 +93,8 @@ Describe a problem. Get a **ruthlessly personalized solution**:
 - Mental Model Application (First Principles, 80/20, Inversion...)
 - Concrete Action Plans
 - Personal Blind Spot Warnings
+- **Strategy Vault**: save, search, load, edit, copy, and delete generated strategies
+- **Context Builder**: manually select skills, archetypes, and journal entries as extra context
 
 ### 📱 **Installable PWA (No App Store Needed)**
 MyStats can be installed like an app on mobile/desktop via PWA:
@@ -232,13 +232,13 @@ If you already run a local `memU` server, you can switch to **Server (API)** in 
 | **Local DB** | IndexedDB (via idb) + localStorage fallback |
 | **Cloud Sync** | Supabase (Auth + Postgres, optional) |
 | **Memory** | memU (embedded browser engine or API server) |
-| **Validation** | Zod |
+| **Validation** | Zod 4 |
 | **Icons** | Lucide React |
 | **Routing** | React Router 7 |
 | **Error Tracking** | Sentry (optional, lazy-loaded) |
 | **PWA** | vite-plugin-pwa (Workbox) |
-| **Testing** | Vitest + Testing Library |
-| **CI/CD** | GitHub Actions → Vercel |
+| **Testing** | Vitest + Testing Library + Playwright (E2E) |
+| **CI/CD** | GitHub Actions (CI + CodeQL + Secret Scan) → Vercel |
 
 ---
 
@@ -247,42 +247,56 @@ If you already run a local `memU` server, you can switch to **Server (API)** in 
 ```
 mystats/
 ├── src/
+│   ├── bootstrap/
+│   │   └── appInit.ts           # App initialization (Sentry, DB migration, OAuth, Cloud Sync)
 │   ├── components/
-│   │   ├── layout/          # Shell (app frame, navigation, page transitions)
-│   │   ├── ui/              # shadcn/ui primitives (Button, Card, Badge, Input…)
-│   │   ├── ErrorBoundary    # Global crash boundary + debug report
-│   │   └── PwaUpdatePrompt  # SW update / offline-ready toast
+│   │   ├── layout/              # Shell (app frame, navigation, page transitions)
+│   │   ├── ui/                  # shadcn/ui primitives (Button, Card, Badge, Input, Textarea…)
+│   │   ├── ErrorBoundary        # Global crash boundary + debug report
+│   │   └── PwaUpdatePrompt      # SW update / offline-ready toast
 │   ├── db/
-│   │   ├── db.ts            # IndexedDB schema, migrations, CRUD helpers
-│   │   └── fallback.ts      # localStorage / in-memory fallback storage
+│   │   ├── db.ts                # IndexedDB schema, migrations, CRUD helpers
+│   │   └── fallback.ts          # localStorage / in-memory fallback storage
 │   ├── hooks/
-│   │   ├── useLanguage.ts   # i18n context consumer hook
-│   │   └── useDbRecovery.ts # Automatic fallback → DB recovery
+│   │   ├── useLanguage.ts       # i18n context consumer hook
+│   │   └── useDbRecovery.ts     # Automatic fallback → DB recovery
 │   ├── lib/
-│   │   ├── ai-provider.ts   # Multi-AI engine (Gemini/OpenAI/Claude/Grok)
-│   │   ├── memu.ts          # memU memory system (embedded + server API)
-│   │   ├── cloudSync.ts     # Supabase Cloud Sync logic
-│   │   ├── cloudSyncManager.ts # Auto-sync orchestrator
-│   │   ├── supabase.ts      # Supabase client init
-│   │   ├── sentry.ts        # Sentry lazy loader
-│   │   ├── debug.ts         # Debug snapshot report
-│   │   ├── translations.ts  # EN/KO translation strings
-│   │   ├── LanguageProvider  # React context provider for i18n
-│   │   ├── LanguageContext   # Language context definition
-│   │   └── utils.ts         # Shared utilities (cn, normalizeSkillName…)
+│   │   ├── ai-provider.ts       # Multi-AI engine (Gemini/OpenAI/Claude/Grok)
+│   │   ├── backup.ts            # Export/import backup logic
+│   │   ├── cloudSync.ts         # Supabase Cloud Sync logic
+│   │   ├── cloudSyncManager.ts  # Auto-sync orchestrator
+│   │   ├── debug.ts             # Debug snapshot report
+│   │   ├── journalExplorer.ts   # Journal search/filter engine
+│   │   ├── memu.ts              # memU memory system (embedded + server API)
+│   │   ├── memu.worker.ts       # memU Web Worker for background processing
+│   │   ├── sentry.ts            # Sentry lazy loader
+│   │   ├── supabase.ts          # Supabase client init
+│   │   ├── tombstones.ts        # Soft-delete tracking for cloud sync
+│   │   ├── translations.ts      # EN/KO translation strings
+│   │   ├── LanguageProvider      # React context provider for i18n
+│   │   ├── LanguageContext       # Language context definition
+│   │   └── utils.ts             # Shared utilities (cn, normalizeSkillName, generateId…)
 │   ├── pages/
-│   │   ├── Home.tsx         # Dashboard with stats & quick start
-│   │   ├── Journal.tsx      # Neural memory journal (write + AI analyze)
-│   │   ├── Profile.tsx      # Deep intelligence profile (skills, archetypes)
-│   │   ├── Strategy.tsx     # AI strategy engine (problem → action plan)
-│   │   └── Settings.tsx     # API keys, memU, Cloud Sync, backup/restore
-│   ├── test/                # Test setup (Vitest + jsdom)
-│   ├── App.tsx              # Router + providers + lazy page loading
-│   └── main.tsx             # Entry point + Sentry init
-├── chrome-extension/        # Chrome toolbar launcher extension
-├── docs/                    # Additional documentation
-├── supabase/                # Supabase SQL migrations
-├── public/                  # Static assets, PWA manifest, icons
+│   │   ├── Home.tsx             # Dashboard with stats & quick start
+│   │   ├── Journal.tsx          # Neural memory journal (write + AI analyze)
+│   │   ├── Profile.tsx          # Deep intelligence profile (skills, archetypes)
+│   │   ├── Strategy.tsx         # AI strategy engine + Vault + Context Builder
+│   │   ├── Settings.tsx         # Orchestrates settings sub-cards
+│   │   ├── journal/
+│   │   │   └── draftStorage.ts  # Draft auto-save/restore
+│   │   └── settings/
+│   │       ├── AISettingsCard        # API key/provider/model settings
+│   │       ├── CloudSyncCard         # Cloud sync sign-in/config
+│   │       ├── DataManagementCard    # Export/import/reset controls
+│   │       └── MemuSettingsCard      # Memory system settings
+│   └── test/                    # Test setup (Vitest + jsdom)
+├── e2e/                         # Playwright E2E tests
+├── scripts/                     # Deployment helper scripts
+├── chrome-extension/            # Chrome toolbar launcher extension
+├── docs/                        # Additional documentation
+├── supabase/                    # Supabase SQL migrations
+├── public/                      # Static assets, PWA manifest, icons
+├── .github/                     # CI workflows, issue/PR templates, dependabot
 └── package.json
 ```
 

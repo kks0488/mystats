@@ -7,7 +7,6 @@ import {
   BrainCircuit,
   MessageSquareQuote,
   Zap,
-  ShieldCheck,
   Check,
   AlertTriangle,
   Search,
@@ -570,10 +569,10 @@ export const Strategy = () => {
                 </p>
             </header>
 
-	            <div className="grid gap-8 lg:grid-cols-12">
+	            <div className="space-y-8">
 	                {/* Strategy Vault */}
-	                <div className="order-2 lg:order-1 lg:col-span-3 space-y-6">
-	                    <Card className="bg-secondary/20 border-border backdrop-blur-2xl rounded-[3rem] overflow-hidden shadow-2xl">
+	                <div className="space-y-6">
+	                    <Card className="bg-secondary/20 border-border backdrop-blur-2xl rounded-[2rem] overflow-clip shadow-2xl">
 	                        <CardHeader className="p-8 pb-4">
 	                            <div className="flex items-start justify-between gap-3">
 	                                <div className="flex items-start gap-3">
@@ -622,7 +621,7 @@ export const Strategy = () => {
 	                                />
 	                            </div>
 
-	                            <div className="space-y-2 max-h-[520px] overflow-y-auto custom-scrollbar pr-1">
+	                            <div className="flex gap-4 overflow-x-auto custom-scrollbar pb-2">
 	                                {filteredVault.length === 0 ? (
 	                                    <div className="p-6 text-center text-sm text-muted-foreground">
 	                                        {t('strategyVaultEmpty')}
@@ -642,7 +641,7 @@ export const Strategy = () => {
 	                                                type="button"
 	                                                onClick={() => handleLoadSolution(item)}
 	                                                className={cn(
-	                                                    "w-full text-left p-4 rounded-[1.75rem] border transition-colors",
+	                                                    "min-w-[240px] flex-shrink-0 text-left p-4 rounded-[1.75rem] border transition-colors",
 	                                                    selected
 	                                                        ? "bg-primary/10 border-primary/30"
 	                                                        : "bg-background/30 border-border hover:bg-background/40"
@@ -678,8 +677,9 @@ export const Strategy = () => {
 	                    </Card>
 	                </div>
 
+	                <div className="grid gap-8 lg:grid-cols-2">
 	                {/* Input Workspace */}
-	                <div className="order-1 lg:order-2 lg:col-span-4 space-y-6">
+	                <div className="space-y-6">
 	                    <Card className="bg-secondary/20 border-border backdrop-blur-2xl rounded-[3rem] overflow-hidden shadow-2xl transition-all duration-500 hover:bg-secondary/30">
 	                        <CardHeader className="p-10 pb-6">
 	                            <div className="flex items-center gap-4 mb-2">
@@ -947,20 +947,10 @@ export const Strategy = () => {
                         </CardContent>
                     </Card>
 
-                    <div className="hidden md:grid grid-cols-2 gap-4">
-                        <div className="p-4 bg-secondary/10 border border-border rounded-2xl flex items-center gap-3 group">
-                            <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg group-hover:scale-110 transition-transform"><BrainCircuit size={16} /></div>
-                            <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none">Neural<br/><span className="text-foreground text-[10px] font-bold">{t('neuralSync')}</span></div>
-                        </div>
-                        <div className="p-4 bg-secondary/10 border border-border rounded-2xl flex items-center gap-3 group">
-                            <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg group-hover:scale-110 transition-transform"><ShieldCheck size={16} /></div>
-                            <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none">Intel<br/><span className="text-foreground text-[10px] font-bold">{t('intelVerified')}</span></div>
-                        </div>
-                    </div>
 	                </div>
 
 	                {/* Output Workspace */}
-	                <div className="order-3 lg:col-span-5">
+	                <div>
 	                    <Card className="h-full min-h-[600px] flex flex-col bg-secondary/10 border-border backdrop-blur-3xl rounded-[3rem] overflow-hidden shadow-2xl relative">
 	                        <CardHeader className="p-10 border-b border-border bg-secondary/5 flex flex-row items-center justify-between">
 	                             <div className="flex items-center gap-4">
@@ -1222,6 +1212,7 @@ export const Strategy = () => {
                             <span className="font-mono opacity-50">v{__APP_VERSION__}</span>
                         </div>
                     </Card>
+                </div>
                 </div>
             </div>
         </div>
