@@ -4,15 +4,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/hooks/useLanguage';
 import { normalizeSkillName } from '@/lib/utils';
-import { DB_NAME, DB_VERSION, exportAllData, importAllData, updateMirror, type Insight, type JournalEntry, type Skill } from '@/db/db';
+import { DB_NAME, DB_VERSION, exportAllData, importAllData, updateMirror, type Insight, type JournalEntry, type Skill, type Solution } from '@/db/db';
 import { hasAnyFallbackCollections, mergeById, parseBackupPayload } from '@/lib/backup';
+import { clearTombstones } from '@/lib/tombstones';
 import {
   loadFallbackInsights,
   loadFallbackJournalEntries,
   loadFallbackSkills,
+  loadFallbackSolutions,
   replaceFallbackInsights,
   replaceFallbackJournalEntries,
   replaceFallbackSkills,
+  replaceFallbackSolutions,
 } from '@/db/fallback';
 
 const mergeSkillsByName = (items: Skill[]): Skill[] => {
@@ -82,6 +85,7 @@ export function DataManagementCard({ onRefreshStorageMode }: { onRefreshStorageM
       const fallback = {
         journal: loadFallbackJournalEntries(),
         skills: loadFallbackSkills(),
+        solutions: loadFallbackSolutions(),
         insights: loadFallbackInsights(),
       };
       const hasFallback = hasAnyFallbackCollections(fallback);
@@ -112,7 +116,7 @@ export function DataManagementCard({ onRefreshStorageMode }: { onRefreshStorageM
           },
         },
         ...data,
-        fallback: includeFallback ? fallback : { journal: [], skills: [], insights: [] },
+        fallback: includeFallback ? fallback : { journal: [], skills: [], solutions: [], insights: [] },
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -164,18 +168,22 @@ export function DataManagementCard({ onRefreshStorageMode }: { onRefreshStorageM
             ? [...baseData.journal, ...fallbackData.journal]
             : [...baseData.journal]) as JournalEntry[];
           const selectedSkills = (includeFallback ? [...baseData.skills, ...fallbackData.skills] : [...baseData.skills]) as Skill[];
+          const selectedSolutions = (includeFallback
+            ? [...baseData.solutions, ...fallbackData.solutions]
+            : [...baseData.solutions]) as Solution[];
           const selectedInsights = (includeFallback
             ? [...baseData.insights, ...fallbackData.insights]
             : [...baseData.insights]) as Insight[];
 
           const rawJournal = selectedJournal;
           const rawSkills = selectedSkills;
+          const rawSolutions = selectedSolutions;
           const rawInsights = selectedInsights;
 
           const mergedJournal = mergeById<JournalEntry>(selectedJournal);
           const mergedSkills = mergeSkillsByName(selectedSkills);
           const mergedInsights = mergeById<Insight>(selectedInsights);
-          const mergedSolutions = mergeById(baseData.solutions as { id?: string }[]);
+          const mergedSolutions = mergeById<Solution>(selectedSolutions);
 
           const summaryText = t('importSummary')
             .replace('{entries}', String(mergedJournal.length))
@@ -204,6 +212,7 @@ export function DataManagementCard({ onRefreshStorageMode }: { onRefreshStorageM
             );
             replaceFallbackJournalEntries(rawJournal);
             replaceFallbackSkills(rawSkills);
+            replaceFallbackSolutions(rawSolutions);
             replaceFallbackInsights(rawInsights);
             alert(
               mergedJournal.length || mergedSkills.length || mergedInsights.length || mergedSolutions.length
@@ -239,6 +248,8 @@ export function DataManagementCard({ onRefreshStorageMode }: { onRefreshStorageM
           localStorage.removeItem('MYSTATS_FALLBACK_JOURNAL');
           localStorage.removeItem('MYSTATS_FALLBACK_SKILLS');
           localStorage.removeItem('MYSTATS_FALLBACK_INSIGHTS');
+          localStorage.removeItem('MYSTATS_FALLBACK_SOLUTIONS');
+          clearTombstones();
         } catch {
           // Ignore storage errors
         }

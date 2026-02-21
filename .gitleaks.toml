@@ -1,0 +1,10 @@
+title = "mystats-gitleaks-config"
+
+[allowlist]
+description = "Allow known dummy/test placeholders used in tests and docs"
+regexes = [
+  '''sk-e2e-dummy''',
+  '''sk-test''',
+  '''AIza-test''',
+  '''VITE_SUPABASE_ANON_KEY''',
+]

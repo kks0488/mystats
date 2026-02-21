@@ -3,6 +3,46 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+function resolveVendorChunk(id: string): string | undefined {
+  if (!id.includes('node_modules')) return undefined;
+  const normalized = id.replace(/\\/g, '/');
+
+  if (normalized.includes('/node_modules/react/') || normalized.includes('/node_modules/react-dom/')) {
+    return 'vendor-react';
+  }
+  if (normalized.includes('/node_modules/react-router/') || normalized.includes('/node_modules/react-router-dom/')) {
+    return 'vendor-router';
+  }
+  if (normalized.includes('/node_modules/framer-motion/')) {
+    return 'vendor-motion';
+  }
+  if (
+    normalized.includes('/node_modules/react-markdown/') ||
+    normalized.includes('/node_modules/micromark/') ||
+    normalized.includes('/node_modules/mdast-') ||
+    normalized.includes('/node_modules/hast-') ||
+    normalized.includes('/node_modules/remark-') ||
+    normalized.includes('/node_modules/rehype-') ||
+    normalized.includes('/node_modules/unified/') ||
+    normalized.includes('/node_modules/vfile/')
+  ) {
+    return 'vendor-markdown';
+  }
+  if (
+    normalized.includes('/node_modules/@supabase/') ||
+    normalized.includes('/node_modules/@google/generative-ai/')
+  ) {
+    return 'vendor-ai-data';
+  }
+  if (normalized.includes('/node_modules/@radix-ui/') || normalized.includes('/node_modules/lucide-react/')) {
+    return 'vendor-ui';
+  }
+  if (normalized.includes('/node_modules/zod/')) {
+    return 'vendor-zod';
+  }
+  return 'vendor-misc';
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -88,6 +128,15 @@ export default defineConfig(({ mode }) => {
           target: memuTarget,
           changeOrigin: true,
           rewrite: (p) => p.replace(/^\/api\/memu/, ''),
+        },
+      },
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            return resolveVendorChunk(id);
+          },
         },
       },
     },

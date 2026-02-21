@@ -1,6 +1,7 @@
 import type { IDBPDatabase } from 'idb';
 import {
   getDB,
+  deleteJournalEntryCascade,
   InsightSchema,
   JournalEntrySchema,
   SkillSchema,
@@ -17,13 +18,15 @@ import {
   loadFallbackInsights,
   loadFallbackJournalEntries,
   loadFallbackSkills,
+  deleteFallbackJournalEntryCascade,
   replaceFallbackInsights,
   replaceFallbackJournalEntries,
   replaceFallbackSkills,
 } from '@/db/fallback';
+import { listTombstones, pruneTombstones, upsertTombstone, type TombstoneKind } from '@/lib/tombstones';
 import { getSupabaseClient } from '@/lib/supabase';
 
-export type CloudSyncKind = 'journal' | 'skills' | 'solutions' | 'insights';
+export type CloudSyncKind = TombstoneKind;
 
 export interface CloudSyncConfig {
   enabled: boolean;
@@ -32,6 +35,11 @@ export interface CloudSyncConfig {
 
 const CLOUD_SYNC_STORAGE_KEY = 'MYSTATS_CLOUD_SYNC_CONFIG_V1';
 const CLOUD_SYNC_LAST_SYNC_KEY = 'MYSTATS_CLOUD_SYNC_LAST_SYNC_V1';
+const CLOUD_SYNC_LAST_RESULT_KEY = 'MYSTATS_CLOUD_SYNC_LAST_RESULT_V1';
+const CLOUD_SYNC_COOLDOWN_UNTIL_KEY = 'MYSTATS_CLOUD_SYNC_COOLDOWN_UNTIL_V1';
+const DEFAULT_RETRY_ATTEMPTS = 3;
+const DEFAULT_RETRY_BASE_DELAY_MS = 300;
+const DEFAULT_NETWORK_COOLDOWN_MS = 30_000;
 
 const DEFAULT_CONFIG: CloudSyncConfig = {
   enabled: false,
@@ -82,6 +90,195 @@ function setCloudLastSyncedAt(ts: number): void {
   }
 }
 
+export type CloudSyncFailureCode = 'network' | 'auth' | 'conflict' | 'unknown';
+export type CloudSyncStatusPhase = 'start' | 'retry' | 'success' | 'fail' | 'cooldown';
+
+export type CloudSyncStatusEventDetail = {
+  phase: CloudSyncStatusPhase;
+  ok: boolean;
+  message?: string;
+  retryCount: number;
+  at: number;
+  cooldownUntil?: number;
+};
+
+const CLOUD_FAILURE_CODES: ReadonlySet<CloudSyncFailureCode> = new Set(['network', 'auth', 'conflict', 'unknown']);
+
+export type CloudSyncResult = {
+  ok: boolean;
+  appliedRemote: number;
+  pushedLocal: number;
+  mode: LocalSnapshot['mode'] | 'signed_out' | 'not_configured';
+  message?: string;
+  retryCount: number;
+  cooldownUntil?: number;
+  failureCode?: CloudSyncFailureCode;
+  skippedRemoteBecauseTombstone?: number;
+  skippedRemoteBecauseLocalNewer?: number;
+};
+
+export type CloudSyncLastResult = CloudSyncResult & { at: number };
+
+export function getCloudLastSyncResult(): CloudSyncLastResult | null {
+  try {
+    const raw = localStorage.getItem(CLOUD_SYNC_LAST_RESULT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<CloudSyncLastResult>;
+    const at = typeof parsed.at === 'number' ? parsed.at : Number(parsed.at);
+    if (!Number.isFinite(at) || at <= 0) return null;
+    const appliedRemote = typeof parsed.appliedRemote === 'number' ? parsed.appliedRemote : Number(parsed.appliedRemote);
+    const pushedLocal = typeof parsed.pushedLocal === 'number' ? parsed.pushedLocal : Number(parsed.pushedLocal);
+    const retryCount = typeof parsed.retryCount === 'number' ? parsed.retryCount : Number(parsed.retryCount);
+    const cooldownUntil =
+      typeof parsed.cooldownUntil === 'number'
+        ? parsed.cooldownUntil
+        : parsed.cooldownUntil !== undefined
+          ? Number(parsed.cooldownUntil)
+          : undefined;
+    const failureCode = normalizeCloudFailureCode(parsed.failureCode);
+    const skippedRemoteBecauseTombstone =
+      typeof parsed.skippedRemoteBecauseTombstone === 'number'
+        ? parsed.skippedRemoteBecauseTombstone
+        : parsed.skippedRemoteBecauseTombstone !== undefined
+          ? Number(parsed.skippedRemoteBecauseTombstone)
+          : undefined;
+    const skippedRemoteBecauseLocalNewer =
+      typeof parsed.skippedRemoteBecauseLocalNewer === 'number'
+        ? parsed.skippedRemoteBecauseLocalNewer
+        : parsed.skippedRemoteBecauseLocalNewer !== undefined
+          ? Number(parsed.skippedRemoteBecauseLocalNewer)
+          : undefined;
+    const mode = typeof parsed.mode === 'string' ? parsed.mode : null;
+    if (!mode) return null;
+    return {
+      at,
+      ok: Boolean(parsed.ok),
+      appliedRemote: Number.isFinite(appliedRemote) ? appliedRemote : 0,
+      pushedLocal: Number.isFinite(pushedLocal) ? pushedLocal : 0,
+      retryCount: Number.isFinite(retryCount) ? Math.max(0, retryCount) : 0,
+      cooldownUntil: cooldownUntil !== undefined && Number.isFinite(cooldownUntil) && cooldownUntil > 0 ? cooldownUntil : undefined,
+      failureCode,
+      mode: mode as CloudSyncLastResult['mode'],
+      message: typeof parsed.message === 'string' ? parsed.message : undefined,
+      skippedRemoteBecauseTombstone:
+        skippedRemoteBecauseTombstone !== undefined && Number.isFinite(skippedRemoteBecauseTombstone)
+          ? skippedRemoteBecauseTombstone
+          : undefined,
+      skippedRemoteBecauseLocalNewer:
+        skippedRemoteBecauseLocalNewer !== undefined && Number.isFinite(skippedRemoteBecauseLocalNewer)
+          ? skippedRemoteBecauseLocalNewer
+          : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function setCloudLastSyncResult(result: CloudSyncLastResult): void {
+  try {
+    localStorage.setItem(CLOUD_SYNC_LAST_RESULT_KEY, JSON.stringify(result));
+  } catch {
+    // ignore
+  }
+}
+
+function normalizeCloudFailureCode(value: unknown): CloudSyncFailureCode | undefined {
+  if (typeof value !== 'string') return undefined;
+  return CLOUD_FAILURE_CODES.has(value as CloudSyncFailureCode) ? (value as CloudSyncFailureCode) : undefined;
+}
+
+function emitCloudSyncStatus(detail: CloudSyncStatusEventDetail): void {
+  window.dispatchEvent(new CustomEvent<CloudSyncStatusEventDetail>('mystats-cloud-sync-status', { detail }));
+}
+
+function inferCloudFailureCode(result: Pick<CloudSyncResult, 'mode' | 'message'>): CloudSyncFailureCode {
+  if (result.mode === 'signed_out') return 'auth';
+
+  const raw = (result.message || '').trim().toLowerCase();
+  if (!raw) return 'unknown';
+  if (
+    raw.includes('failed to fetch') ||
+    raw.includes('network') ||
+    raw.includes('timeout') ||
+    raw.includes('timed out') ||
+    raw.includes('rate') ||
+    raw.includes('429') ||
+    raw.includes('500') ||
+    raw.includes('502') ||
+    raw.includes('503') ||
+    raw.includes('504')
+  ) {
+    return 'network';
+  }
+  if (
+    raw.includes('not signed in') ||
+    raw.includes('jwt') ||
+    raw.includes('token') ||
+    raw.includes('unauthorized') ||
+    raw.includes('invalid login')
+  ) {
+    return 'auth';
+  }
+  if (
+    raw.includes('row level security') ||
+    raw.includes('row-level security') ||
+    raw.includes('violates row-level security') ||
+    raw.includes('conflict')
+  ) {
+    return 'conflict';
+  }
+  return 'unknown';
+}
+
+function withCloudResultDefaults(result: Omit<CloudSyncResult, 'retryCount'> & { retryCount?: number }): CloudSyncResult {
+  const retryCount = Number.isFinite(result.retryCount) ? Math.max(0, Number(result.retryCount)) : 0;
+  const failureCode = result.ok ? undefined : result.failureCode ?? inferCloudFailureCode(result);
+  const cooldownUntil =
+    typeof result.cooldownUntil === 'number' && Number.isFinite(result.cooldownUntil) && result.cooldownUntil > 0
+      ? result.cooldownUntil
+      : undefined;
+
+  return {
+    ...result,
+    retryCount,
+    failureCode,
+    cooldownUntil,
+  };
+}
+
+function storeCloudSyncResult(result: Omit<CloudSyncResult, 'retryCount'> & { retryCount?: number }): CloudSyncResult {
+  const normalized = withCloudResultDefaults(result);
+  setCloudLastSyncResult({
+    at: Date.now(),
+    ...normalized,
+  });
+  return normalized;
+}
+
+export function getCloudSyncCooldownUntil(): number | null {
+  try {
+    const raw = localStorage.getItem(CLOUD_SYNC_COOLDOWN_UNTIL_KEY);
+    if (!raw) return null;
+    const value = Number(raw);
+    if (!Number.isFinite(value) || value <= Date.now()) return null;
+    return value;
+  } catch {
+    return null;
+  }
+}
+
+function setCloudSyncCooldownUntil(ts: number | null): void {
+  try {
+    if (typeof ts === 'number' && Number.isFinite(ts) && ts > Date.now()) {
+      localStorage.setItem(CLOUD_SYNC_COOLDOWN_UNTIL_KEY, String(ts));
+      return;
+    }
+    localStorage.removeItem(CLOUD_SYNC_COOLDOWN_UNTIL_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 type RemoteItemRow = {
   user_id: string;
   kind: CloudSyncKind;
@@ -114,6 +311,18 @@ function getItemLastModified(kind: CloudSyncKind, item: unknown): number {
               ? (record.timestamp as number)
               : 0;
   return Number.isFinite(lastModified) ? lastModified : 0;
+}
+
+function readLocalTombstoneMap(): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const item of listTombstones()) {
+    map.set(item.key, item.lastModified);
+  }
+  return map;
+}
+
+function getTombstoneLastModified(tombstones: Map<string, number>, kind: CloudSyncKind, id: string): number {
+  return tombstones.get(`${kind}:${id}`) ?? 0;
 }
 
 async function readLocalSnapshot(): Promise<LocalSnapshot> {
@@ -151,6 +360,85 @@ async function applyRemoteToDb(
   ]);
   await tx.done;
   await updateMirror();
+}
+
+type RemoteDeletion = { kind: CloudSyncKind; id: string; last_modified: number };
+
+async function applyRemoteDeletesToDb(db: IDBPDatabase<MyStatsDB>, deletions: RemoteDeletion[]): Promise<void> {
+  if (!deletions.length) return;
+  let needsMirrorUpdate = false;
+
+  for (const deletion of deletions) {
+    const kind = deletion.kind;
+    const id = deletion.id;
+    const ts = deletion.last_modified;
+    if (!id) continue;
+
+    if (kind === 'journal') {
+      await deleteJournalEntryCascade(db, id, ts);
+      continue;
+    }
+
+    if (kind === 'skills') {
+      const tx = db.transaction('skills', 'readwrite');
+      await tx.objectStore('skills').delete(id);
+      await tx.done;
+      upsertTombstone('skills', id, ts);
+      needsMirrorUpdate = true;
+      continue;
+    }
+
+    if (kind === 'insights') {
+      const tx = db.transaction('insights', 'readwrite');
+      await tx.objectStore('insights').delete(id);
+      await tx.done;
+      upsertTombstone('insights', id, ts);
+      needsMirrorUpdate = true;
+      continue;
+    }
+
+    if (kind === 'solutions') {
+      const tx = db.transaction('solutions', 'readwrite');
+      await tx.objectStore('solutions').delete(id);
+      await tx.done;
+      upsertTombstone('solutions', id, ts);
+    }
+  }
+
+  if (needsMirrorUpdate) {
+    await updateMirror();
+  }
+}
+
+function applyRemoteDeletesToFallback(deletions: RemoteDeletion[]): void {
+  if (!deletions.length) return;
+  for (const deletion of deletions) {
+    const kind = deletion.kind;
+    const id = deletion.id;
+    const ts = deletion.last_modified;
+    if (!id) continue;
+
+    if (kind === 'journal') {
+      deleteFallbackJournalEntryCascade(id, ts);
+      continue;
+    }
+
+    if (kind === 'solutions') {
+      continue;
+    }
+
+    upsertTombstone(kind, id, ts);
+
+    if (kind === 'skills') {
+      replaceFallbackSkills(loadFallbackSkills().filter((item) => item.id !== id));
+      continue;
+    }
+
+    if (kind === 'insights') {
+      replaceFallbackInsights(loadFallbackInsights().filter((item) => item.id !== id));
+      continue;
+    }
+  }
 }
 
 function applyRemoteToFallback(
@@ -258,29 +546,42 @@ export async function getCloudUserInfo(): Promise<CloudUserInfo | null> {
   return { id: user.id, email, provider };
 }
 
-export async function syncNow(): Promise<{
-  ok: boolean;
-  appliedRemote: number;
-  pushedLocal: number;
-  mode: LocalSnapshot['mode'] | 'signed_out' | 'not_configured';
-  message?: string;
-}> {
+export async function syncNow(): Promise<CloudSyncResult> {
   const supabase = getSupabaseClient();
   if (!supabase) {
-    return { ok: false, appliedRemote: 0, pushedLocal: 0, mode: 'not_configured', message: 'Supabase not configured' };
+    return storeCloudSyncResult({
+      ok: false,
+      appliedRemote: 0,
+      pushedLocal: 0,
+      mode: 'not_configured',
+      message: 'Supabase not configured',
+    });
   }
 
   const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
   if (sessionError) {
-    return { ok: false, appliedRemote: 0, pushedLocal: 0, mode: 'signed_out', message: sessionError.message };
+    return storeCloudSyncResult({
+      ok: false,
+      appliedRemote: 0,
+      pushedLocal: 0,
+      mode: 'signed_out',
+      message: sessionError.message,
+    });
   }
 
   const user = sessionData.session?.user;
   if (!user) {
-    return { ok: false, appliedRemote: 0, pushedLocal: 0, mode: 'signed_out', message: 'Not signed in' };
+    return storeCloudSyncResult({
+      ok: false,
+      appliedRemote: 0,
+      pushedLocal: 0,
+      mode: 'signed_out',
+      message: 'Not signed in',
+    });
   }
 
   const local = await readLocalSnapshot();
+  const localTombstonesBefore = readLocalTombstoneMap();
 
   const { data: remoteRows, error: remoteError } = await supabase
     .from('mystats_items')
@@ -288,7 +589,13 @@ export async function syncNow(): Promise<{
     .eq('user_id', user.id);
 
   if (remoteError) {
-    return { ok: false, appliedRemote: 0, pushedLocal: 0, mode: local.mode, message: remoteError.message };
+    return storeCloudSyncResult({
+      ok: false,
+      appliedRemote: 0,
+      pushedLocal: 0,
+      mode: local.mode,
+      message: remoteError.message,
+    });
   }
 
   const remote = (remoteRows || []) as Array<Omit<RemoteItemRow, 'user_id'> & { user_id?: string }>;
@@ -322,11 +629,37 @@ export async function syncNow(): Promise<{
   };
 
   let appliedRemote = 0;
+  let skippedRemoteBecauseTombstone = 0;
+  let skippedRemoteBecauseLocalNewer = 0;
+  const deletions: RemoteDeletion[] = [];
   for (const item of remoteMap.values()) {
-    if (item.deleted) continue; // Tombstones handled in a later iteration
     const localExisting = localByKind[item.kind].get(item.id);
     const localLm = localExisting ? getItemLastModified(item.kind, localExisting) : 0;
-    if (!localExisting || item.last_modified > localLm) {
+    const tombstoneLm = getTombstoneLastModified(localTombstonesBefore, item.kind, item.id);
+    const localMax = Math.max(localLm, tombstoneLm);
+
+    if (item.deleted) {
+      if (item.kind === 'solutions' && local.mode !== 'db') {
+        continue;
+      }
+      if (item.last_modified > localMax) {
+        deletions.push({ kind: item.kind, id: item.id, last_modified: item.last_modified });
+        appliedRemote += 1;
+      }
+      continue;
+    }
+
+    // Only apply remote upserts when they are newer than BOTH the local item and any local tombstone.
+    // If the item doesn't exist locally, still respect tombstones to avoid resurrecting deletes.
+    const shouldApply = (tombstoneLm === 0 && !localExisting) || item.last_modified > localMax;
+    if (!shouldApply) {
+      if (tombstoneLm > 0 && item.last_modified <= tombstoneLm) {
+        skippedRemoteBecauseTombstone += 1;
+      } else if (localExisting && item.last_modified <= localLm) {
+        skippedRemoteBecauseLocalNewer += 1;
+      }
+    }
+    if (shouldApply) {
       const payload = item.payload as unknown;
       if (!payload || typeof payload !== 'object') continue;
       if (item.kind === 'journal') {
@@ -345,6 +678,7 @@ export async function syncNow(): Promise<{
         apply.insights.push(parsed.data);
         appliedRemote += 1;
       } else if (item.kind === 'solutions') {
+        if (local.mode !== 'db') continue;
         const parsed = SolutionSchema.safeParse(payload);
         if (!parsed.success) continue;
         apply.solutions.push(parsed.data);
@@ -353,17 +687,31 @@ export async function syncNow(): Promise<{
     }
   }
 
-  if (appliedRemote > 0) {
+  const hasUpserts = apply.journal.length > 0 || apply.skills.length > 0 || apply.insights.length > 0 || apply.solutions.length > 0;
+  const hasDeletes = deletions.length > 0;
+
+  if (hasUpserts || hasDeletes) {
     if (local.mode === 'db') {
       const db = await getDB();
-      await applyRemoteToDb(db, apply);
+      if (hasUpserts) {
+        await applyRemoteToDb(db, apply);
+      }
+      if (hasDeletes) {
+        await applyRemoteDeletesToDb(db, deletions);
+      }
     } else {
-      applyRemoteToFallback(local, { journal: apply.journal, skills: apply.skills, insights: apply.insights });
+      if (hasUpserts) {
+        applyRemoteToFallback(local, { journal: apply.journal, skills: apply.skills, insights: apply.insights });
+      }
+      if (hasDeletes) {
+        applyRemoteDeletesToFallback(deletions);
+      }
     }
     window.dispatchEvent(new Event('mystats-data-updated'));
   }
 
   // Push local changes that are newer than remote.
+  const localTombstonesAfter = readLocalTombstoneMap();
   const upserts: RemoteItemRow[] = [];
   const kinds: CloudSyncKind[] = ['journal', 'skills', 'insights', 'solutions'];
   for (const kind of kinds) {
@@ -396,6 +744,8 @@ export async function syncNow(): Promise<{
       })();
       if (!parsedPayload) continue;
       const localLm = getItemLastModified(kind, item);
+      const tombstoneLm = getTombstoneLastModified(localTombstonesAfter, kind, id);
+      if (tombstoneLm > 0 && tombstoneLm >= localLm) continue;
       const remoteLm = remoteMap.get(`${kind}:${id}`)?.last_modified ?? 0;
       if (remoteLm === 0 || localLm > remoteLm) {
         upserts.push({
@@ -410,19 +760,54 @@ export async function syncNow(): Promise<{
     }
   }
 
+  // Push tombstones so deletes won't resurrect on other devices.
+  for (const tombstone of listTombstones()) {
+    if (tombstone.kind === 'solutions' && local.mode !== 'db') continue;
+    const remoteLm = remoteMap.get(tombstone.key)?.last_modified ?? 0;
+    if (tombstone.lastModified <= remoteLm) continue;
+    const localItem = localByKind[tombstone.kind]?.get(tombstone.id);
+    const localLm = localItem ? getItemLastModified(tombstone.kind, localItem) : 0;
+    if (localLm > tombstone.lastModified) continue; // Local item is newer (undelete).
+    upserts.push({
+      user_id: user.id,
+      kind: tombstone.kind,
+      id: tombstone.id,
+      payload: {},
+      last_modified: tombstone.lastModified,
+      deleted: true,
+    });
+  }
+
   let pushedLocal = 0;
   if (upserts.length > 0) {
     const { error: upsertError } = await supabase.from('mystats_items').upsert(upserts, {
       onConflict: 'user_id,kind,id',
     });
     if (upsertError) {
-      return { ok: false, appliedRemote, pushedLocal: 0, mode: local.mode, message: upsertError.message };
+      return storeCloudSyncResult({
+        ok: false,
+        appliedRemote,
+        pushedLocal: 0,
+        mode: local.mode,
+        message: upsertError.message,
+        skippedRemoteBecauseTombstone,
+        skippedRemoteBecauseLocalNewer,
+      });
     }
     pushedLocal = upserts.length;
   }
 
   setCloudLastSyncedAt(Date.now());
-  return { ok: true, appliedRemote, pushedLocal, mode: local.mode };
+  setCloudSyncCooldownUntil(null);
+  pruneTombstones();
+  return storeCloudSyncResult({
+    ok: true,
+    appliedRemote,
+    pushedLocal,
+    mode: local.mode,
+    skippedRemoteBecauseTombstone,
+    skippedRemoteBecauseLocalNewer,
+  });
 }
 
 function isRetryableSyncMessage(message?: string): boolean {
@@ -448,18 +833,131 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function syncNowWithRetry(options?: { attempts?: number; baseDelayMs?: number }): Promise<Awaited<ReturnType<typeof syncNow>>> {
-  const attempts = Math.max(1, Number(options?.attempts ?? 3));
-  const baseDelayMs = Math.max(50, Number(options?.baseDelayMs ?? 300));
+export async function syncNowWithRetry(options?: {
+  attempts?: number;
+  baseDelayMs?: number;
+  cooldownMs?: number;
+}): Promise<CloudSyncResult> {
+  const attempts = Math.max(1, Number(options?.attempts ?? DEFAULT_RETRY_ATTEMPTS));
+  const baseDelayMs = Math.max(50, Number(options?.baseDelayMs ?? DEFAULT_RETRY_BASE_DELAY_MS));
+  const cooldownMs = Math.max(5_000, Number(options?.cooldownMs ?? DEFAULT_NETWORK_COOLDOWN_MS));
 
-  let last: Awaited<ReturnType<typeof syncNow>> | null = null;
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    last = await syncNow();
-    if (last.ok) return last;
-    if (last.mode === 'not_configured' || last.mode === 'signed_out') return last;
-    if (!isRetryableSyncMessage(last.message)) return last;
-    const delay = Math.min(2500, baseDelayMs * Math.pow(2, attempt));
-    await sleep(delay);
+  const activeCooldown = getCloudSyncCooldownUntil();
+  if (activeCooldown && activeCooldown > Date.now()) {
+    const lastMode = getCloudLastSyncResult()?.mode ?? 'not_configured';
+    const result = storeCloudSyncResult({
+      ok: false,
+      appliedRemote: 0,
+      pushedLocal: 0,
+      mode: lastMode,
+      message: 'Network cooldown active',
+      retryCount: 0,
+      cooldownUntil: activeCooldown,
+      failureCode: 'network',
+    });
+    emitCloudSyncStatus({
+      phase: 'cooldown',
+      ok: false,
+      message: result.message,
+      retryCount: result.retryCount,
+      at: Date.now(),
+      cooldownUntil: activeCooldown,
+    });
+    return result;
   }
-  return last ?? { ok: false, appliedRemote: 0, pushedLocal: 0, mode: 'not_configured', message: 'Unknown error' };
+
+  emitCloudSyncStatus({
+    phase: 'start',
+    ok: false,
+    message: 'Sync started',
+    retryCount: 0,
+    at: Date.now(),
+  });
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const attemptResult = await syncNow();
+    const current = storeCloudSyncResult({ ...attemptResult, retryCount: attempt });
+
+    if (current.ok) {
+      setCloudSyncCooldownUntil(null);
+      emitCloudSyncStatus({
+        phase: 'success',
+        ok: true,
+        message: current.message,
+        retryCount: current.retryCount,
+        at: Date.now(),
+      });
+      return current;
+    }
+
+    const retryable =
+      current.mode !== 'not_configured' &&
+      current.mode !== 'signed_out' &&
+      current.failureCode === 'network' &&
+      isRetryableSyncMessage(current.message);
+
+    if (!retryable) {
+      if (current.failureCode !== 'network') {
+        setCloudSyncCooldownUntil(null);
+      }
+      emitCloudSyncStatus({
+        phase: 'fail',
+        ok: false,
+        message: current.message,
+        retryCount: current.retryCount,
+        at: Date.now(),
+      });
+      return current;
+    }
+
+    if (attempt < attempts - 1) {
+      const nextAttempt = attempt + 1;
+      emitCloudSyncStatus({
+        phase: 'retry',
+        ok: false,
+        message: current.message,
+        retryCount: nextAttempt,
+        at: Date.now(),
+      });
+      const delay = Math.min(2_500, baseDelayMs * Math.pow(2, attempt));
+      await sleep(delay);
+      continue;
+    }
+
+    const cooldownUntil = Date.now() + cooldownMs;
+    setCloudSyncCooldownUntil(cooldownUntil);
+    const exhausted = storeCloudSyncResult({
+      ...current,
+      retryCount: attempt,
+      cooldownUntil,
+      failureCode: 'network',
+    });
+    emitCloudSyncStatus({
+      phase: 'cooldown',
+      ok: false,
+      message: exhausted.message,
+      retryCount: exhausted.retryCount,
+      at: Date.now(),
+      cooldownUntil,
+    });
+    return exhausted;
+  }
+
+  const fallback = storeCloudSyncResult({
+    ok: false,
+    appliedRemote: 0,
+    pushedLocal: 0,
+    mode: 'not_configured',
+    message: 'Unknown error',
+    retryCount: 0,
+    failureCode: 'unknown',
+  });
+  emitCloudSyncStatus({
+    phase: 'fail',
+    ok: false,
+    message: fallback.message,
+    retryCount: fallback.retryCount,
+    at: Date.now(),
+  });
+  return fallback;
 }

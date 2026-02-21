@@ -71,10 +71,13 @@ export function buildDebugReport(): Record<string, unknown> {
   const cloudSync = (() => {
     const raw = safeLocalStorageGet('MYSTATS_CLOUD_SYNC_CONFIG_V1');
     const parsed = safeParseJson(raw);
+    const lastResult = safeParseJson(safeLocalStorageGet('MYSTATS_CLOUD_SYNC_LAST_RESULT_V1'));
     return {
       enabled: parsed ? Boolean(parsed.enabled) : false,
       autoSync: parsed && 'autoSync' in parsed ? Boolean(parsed.autoSync) : true,
       lastSyncedAt: safeLocalStorageGetNumber('MYSTATS_CLOUD_SYNC_LAST_SYNC_V1'),
+      cooldownUntil: safeLocalStorageGetNumber('MYSTATS_CLOUD_SYNC_COOLDOWN_UNTIL_V1'),
+      lastResult,
     };
   })();
 

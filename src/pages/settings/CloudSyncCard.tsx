@@ -9,11 +9,14 @@ import {
   cloudSignInWithPassword,
   cloudSignOut,
   cloudSignUpWithPassword,
+  getCloudLastSyncResult,
   getCloudLastSyncedAt,
   getCloudSyncConfig,
   getCloudUserInfo,
   setCloudSyncConfig,
   syncNowWithRetry,
+  type CloudSyncLastResult,
+  type CloudSyncStatusEventDetail,
 } from '@/lib/cloudSync';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase';
 
@@ -26,6 +29,7 @@ export function CloudSyncCard() {
   const [cloudEnabled, setCloudEnabled] = useState(false);
   const [cloudAutoSync, setCloudAutoSync] = useState(true);
   const [cloudLastSyncedAt, setCloudLastSyncedAt] = useState<number | null>(null);
+  const [cloudLastResult, setCloudLastResult] = useState<CloudSyncLastResult | null>(null);
   const [cloudStatus, setCloudStatus] = useState<'idle' | 'syncing' | 'ok' | 'fail'>('idle');
   const [cloudMessage, setCloudMessage] = useState<string | null>(null);
   const [cloudDebugLine, setCloudDebugLine] = useState<string | null>(null);
@@ -48,6 +52,7 @@ export function CloudSyncCard() {
       if (!raw) return t('cloudSyncFail');
       const m = raw.toLowerCase();
 
+      if (m.includes('cooldown')) return t('cloudErrCooldown');
       if (m.includes('not signed in')) return t('cloudErrNotSignedIn');
       if (m.includes('invalid api key')) return t('cloudErrInvalidKey');
       if (m.includes('jwt expired') || m.includes('invalid jwt') || m.includes('token has expired')) return t('cloudErrAuthExpired');
@@ -79,12 +84,30 @@ export function CloudSyncCard() {
     return Boolean(cloudEmail.trim() && cloudPassword);
   }, [cloudEmail, cloudPassword]);
 
+  const buildCloudResultMeta = useCallback(
+    (result: Pick<CloudSyncLastResult, 'retryCount' | 'cooldownUntil' | 'failureCode'>) => {
+      const parts: string[] = [];
+      if ((result.retryCount ?? 0) > 0) {
+        parts.push(`${t('cloudRetries')}: ${result.retryCount}`);
+      }
+      if (typeof result.cooldownUntil === 'number' && result.cooldownUntil > 0) {
+        parts.push(`${t('cloudCooldownUntil')}: ${new Date(result.cooldownUntil).toLocaleTimeString()}`);
+      }
+      if (result.failureCode) {
+        parts.push(`${t('cloudFailureCode')}: ${result.failureCode}`);
+      }
+      return parts.join(' · ');
+    },
+    [t]
+  );
+
   useEffect(() => {
     setCloudConfigured(isSupabaseConfigured());
     const cloudConfig = getCloudSyncConfig();
     setCloudEnabled(cloudConfig.enabled);
     setCloudAutoSync(cloudConfig.autoSync);
     setCloudLastSyncedAt(getCloudLastSyncedAt());
+    setCloudLastResult(getCloudLastSyncResult());
 
     if (!isSupabaseConfigured()) return;
 
@@ -110,6 +133,49 @@ export function CloudSyncCard() {
       data?.subscription?.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    const onSyncStatus = (event: Event) => {
+      const detail = (event as CustomEvent<CloudSyncStatusEventDetail>).detail;
+      if (!detail || typeof detail !== 'object') return;
+
+      setCloudLastResult(getCloudLastSyncResult());
+      setCloudLastSyncedAt(getCloudLastSyncedAt());
+
+      if (detail.phase === 'start' || detail.phase === 'retry') {
+        setCloudStatus('syncing');
+        if (detail.phase === 'retry') {
+          setCloudMessage(`${t('cloudRetrying')} (${detail.retryCount})`);
+        }
+        return;
+      }
+
+      if (detail.phase === 'success') {
+        setCloudStatus('ok');
+        return;
+      }
+
+      if (detail.phase === 'cooldown') {
+        setCloudStatus('fail');
+        setCloudMessage(
+          detail.cooldownUntil && detail.cooldownUntil > 0
+            ? `${t('cloudErrCooldown')} (${new Date(detail.cooldownUntil).toLocaleTimeString()})`
+            : t('cloudErrCooldown')
+        );
+        setCloudDebugLine(buildCloudStateLine());
+        return;
+      }
+
+      if (detail.phase === 'fail') {
+        setCloudStatus('fail');
+        setCloudMessage(formatCloudError(detail.message));
+        setCloudDebugLine(buildCloudStateLine());
+      }
+    };
+
+    window.addEventListener('mystats-cloud-sync-status', onSyncStatus as EventListener);
+    return () => window.removeEventListener('mystats-cloud-sync-status', onSyncStatus as EventListener);
+  }, [buildCloudStateLine, formatCloudError, t]);
 
   const handleOAuthSignIn = useCallback(
     async (provider: 'google' | 'github') => {
@@ -170,13 +236,22 @@ export function CloudSyncCard() {
     setCloudStatus('syncing');
     try {
       const result = await syncNowWithRetry();
+      setCloudLastResult(getCloudLastSyncResult());
       if (result.ok) {
         setCloudStatus('ok');
         setCloudLastSyncedAt(getCloudLastSyncedAt());
-        setCloudMessage(`${t('cloudSyncOk')} · ${result.appliedRemote}↓ ${result.pushedLocal}↑`);
+        const protectedCount = result.skippedRemoteBecauseTombstone ?? 0;
+        const protectedSuffix = protectedCount > 0 ? ` · ${t('cloudProtectedByDeletes')} ${protectedCount}` : '';
+        const metaSuffix = buildCloudResultMeta(result);
+        setCloudMessage(
+          `${t('cloudSyncOk')} · ${result.appliedRemote}↓ ${result.pushedLocal}↑${protectedSuffix}${metaSuffix ? ` · ${metaSuffix}` : ''}`
+        );
       } else {
         setCloudStatus('fail');
-        setCloudMessage(formatCloudError(result.message));
+        const metaSuffix = buildCloudResultMeta(result);
+        setCloudMessage(
+          `${formatCloudError(result.message)}${metaSuffix ? ` · ${metaSuffix}` : ''}`
+        );
         setCloudDebugLine(buildCloudStateLine());
       }
     } catch (err) {
@@ -184,7 +259,7 @@ export function CloudSyncCard() {
       setCloudMessage(formatCloudError(err instanceof Error ? err.message : null));
       setCloudDebugLine(buildCloudStateLine());
     }
-  }, [buildCloudStateLine, formatCloudError, t]);
+  }, [buildCloudResultMeta, buildCloudStateLine, formatCloudError, t]);
 
   return (
     <Card className="bg-secondary/20 border-border backdrop-blur-xl rounded-[2rem] overflow-hidden">
@@ -350,6 +425,36 @@ export function CloudSyncCard() {
               {cloudLastSyncedAt && !cloudDebugLine && (
                 <p>
                   {t('cloudLastSynced')}: {new Date(cloudLastSyncedAt).toLocaleString()}
+                </p>
+              )}
+              {cloudLastResult && !cloudMessage && (
+                <p>
+                  {t('cloudLastResult')}: {cloudLastResult.ok ? t('cloudSyncOk') : t('cloudSyncFail')} · {cloudLastResult.appliedRemote}↓{' '}
+                  {cloudLastResult.pushedLocal}↑
+                  {(cloudLastResult.skippedRemoteBecauseTombstone ?? 0) > 0 && (
+                    <>
+                      {' '}
+                      · {t('cloudProtectedByDeletes')} {cloudLastResult.skippedRemoteBecauseTombstone}
+                    </>
+                  )}
+                  {(cloudLastResult.retryCount ?? 0) > 0 && (
+                    <>
+                      {' '}
+                      · {t('cloudRetries')}: {cloudLastResult.retryCount}
+                    </>
+                  )}
+                  {typeof cloudLastResult.cooldownUntil === 'number' && cloudLastResult.cooldownUntil > 0 && (
+                    <>
+                      {' '}
+                      · {t('cloudCooldownUntil')}: {new Date(cloudLastResult.cooldownUntil).toLocaleTimeString()}
+                    </>
+                  )}
+                  {cloudLastResult.failureCode && (
+                    <>
+                      {' '}
+                      · {t('cloudFailureCode')}: {cloudLastResult.failureCode}
+                    </>
+                  )}
                 </p>
               )}
               {cloudMessage && (

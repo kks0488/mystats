@@ -31,6 +31,21 @@ MyStats is designed with **privacy-first, local-first** principles:
 - Row Level Security (RLS) enforced: users can only read/write their own data
 - Supabase anon key is a public client key (safe to expose, scoped by RLS)
 
+## Automated Security Checks
+
+- CI runs `npm audit --omit=dev --audit-level=high` on every push to `main` and every pull request
+- Dependabot is enabled for:
+  - npm dependencies (`/`)
+  - GitHub Actions (`/`)
+- Code scanning workflow:
+  - `/.github/workflows/codeql.yml` runs CodeQL on push/PR and weekly schedule
+- Secret scanning workflow:
+  - `/.github/workflows/secret-scan.yml` runs Gitleaks on push/PR
+  - local allowlist config: `/.gitleaks.toml`
+- Cloud Sync setup script guards against secret key misuse:
+  - `scripts/vercel-set-cloud-sync-env.sh` refuses `sb_secret_*`
+  - JWT payload with `role=service_role` is rejected for client env usage
+
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability:

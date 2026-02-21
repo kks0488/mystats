@@ -2,9 +2,8 @@ import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { Shell } from './components/layout/Shell';
 import { LanguageProvider } from './lib/LanguageProvider';
 import { useEffect, Suspense, lazy } from 'react';
-import { migrateData, recoverFromMirror } from './db/db';
 import { PwaUpdatePrompt } from './components/PwaUpdatePrompt';
-import { getSupabaseClient } from './lib/supabase';
+import { bootstrapAppInfra, startCloudSyncIfEnabled } from './bootstrap/appInit';
 
 const Home = lazy(() => import('./pages/Home').then(module => ({ default: module.Home })));
 const Journal = lazy(() => import('./pages/Journal').then(module => ({ default: module.Journal })));
@@ -15,38 +14,11 @@ const Settings = lazy(() => import('./pages/Settings').then(module => ({ default
 function App() {
   useEffect(() => {
     let stopCloudSync = () => {};
+    let disposed = false;
 
     const init = async () => {
       try {
-        if (import.meta.env.VITE_SENTRY_DSN) {
-          const { initSentry } = await import('./lib/sentry');
-          await initSentry();
-        }
-        await migrateData();
-        await recoverFromMirror();
-
-        // Initialize Supabase early so OAuth callbacks like `#access_token=...` are processed
-        // before the router clears the URL hash (common when navigating after redirect).
-        const configured = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
-        if (configured) {
-          const supabase = getSupabaseClient();
-          const hash = window.location.hash || '';
-          const looksLikeAuthFragment = /access_token=|refresh_token=|provider_token=|expires_in=|token_type=/.test(hash);
-          if (supabase && looksLikeAuthFragment) {
-            void supabase.auth
-              .getSession()
-              .catch(() => null)
-              .finally(() => {
-                try {
-                  window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
-                } catch {
-                  // ignore
-                }
-              });
-          }
-        }
-        
-        // Demo data seeding removed
+        await bootstrapAppInfra();
       } catch (err) {
         console.error("Initialization failed:", err);
         if (import.meta.env.VITE_SENTRY_DSN) {
@@ -58,31 +30,24 @@ function App() {
     };
     init();
 
-    const maybeStartCloudSync = () => {
-      const configured = Boolean(
-        import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY
-      );
-      if (!configured) return;
-
-      let enabled = false;
-      try {
-        const raw = localStorage.getItem('MYSTATS_CLOUD_SYNC_CONFIG_V1');
-        if (raw) enabled = Boolean(JSON.parse(raw)?.enabled);
-      } catch {
-        enabled = false;
-      }
-      if (!enabled) return;
-
-      void import('./lib/cloudSyncManager').then(({ startCloudSyncManager }) => {
-        stopCloudSync = startCloudSyncManager();
+    const refreshCloudSync = () => {
+      stopCloudSync();
+      stopCloudSync = () => {};
+      void startCloudSyncIfEnabled().then((stop) => {
+        if (disposed) {
+          stop();
+          return;
+        }
+        stopCloudSync = stop;
       });
     };
 
-    const onCloudConfig = () => maybeStartCloudSync();
+    const onCloudConfig = () => refreshCloudSync();
     window.addEventListener('mystats-cloud-sync-config', onCloudConfig);
-    maybeStartCloudSync();
+    refreshCloudSync();
 
     return () => {
+      disposed = true;
       window.removeEventListener('mystats-cloud-sync-config', onCloudConfig);
       stopCloudSync();
     };

@@ -14,15 +14,15 @@ import {
 } from '@/lib/ai-provider';
 
 const API_KEY_LINKS: Record<AIProvider, string> = {
-  gemini: 'https://aistudio.google.com/app/apikey',
   openai: 'https://platform.openai.com/api-keys',
+  gemini: 'https://aistudio.google.com/app/apikey',
   claude: 'https://console.anthropic.com/settings/keys',
   grok: 'https://console.x.ai/',
 };
 
 export function AISettingsCard() {
   const { t } = useLanguage();
-  const [provider, setProvider] = useState<AIProvider>('gemini');
+  const [provider, setProvider] = useState<AIProvider>('openai');
   const [apiKey, setApiKey] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
   const [isSaved, setIsSaved] = useState(false);
@@ -198,7 +198,7 @@ export function AISettingsCard() {
               onChange={(e) => setApiKey(e.target.value)}
               className="w-full flex h-12 rounded-xl border border-input bg-background/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-11 focus:ring-primary/20"
               placeholder={
-                provider === 'gemini' ? 'AIza...' : provider === 'openai' ? 'sk-...' : 'Enter API key...'
+                provider === 'openai' ? 'sk-...' : provider === 'gemini' ? 'AIza...' : 'Enter API key...'
               }
             />
           </div>

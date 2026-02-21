@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { JournalEntry, Skill, Insight } from './db';
+import type { JournalEntry, Skill, Insight, Solution } from './db';
 import {
   getFallbackStorageMode,
   loadFallbackJournalEntries,
@@ -7,6 +7,7 @@ import {
   loadFallbackSkills,
   upsertFallbackSkill,
   loadFallbackInsights,
+  loadFallbackSolutions,
   addFallbackInsight,
   clearFallbackData,
   clearFallbackSkills,
@@ -14,12 +15,19 @@ import {
   replaceFallbackJournalEntries,
   replaceFallbackSkills,
   replaceFallbackInsights,
+  replaceFallbackSolutions,
+  updateFallbackJournalEntry,
+  upsertFallbackInsightByEntryId,
+  deleteFallbackJournalEntryCascade,
+  saveFallbackSolution,
+  deleteFallbackSolution,
 } from './fallback';
 
 const FALLBACK_KEYS = {
   journal: 'MYSTATS_FALLBACK_JOURNAL',
   skills: 'MYSTATS_FALLBACK_SKILLS',
   insights: 'MYSTATS_FALLBACK_INSIGHTS',
+  solutions: 'MYSTATS_FALLBACK_SOLUTIONS',
 } as const;
 
 describe('fallback storage', () => {
@@ -518,10 +526,11 @@ describe('fallback storage', () => {
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual(insight);
 
-      const stored = loadFallbackInsights();
-      expect(stored).toHaveLength(1);
-      expect(stored[0]).toEqual(insight);
-    });
+	      const stored = loadFallbackInsights();
+	      expect(stored).toHaveLength(1);
+	      expect(stored[0]).toMatchObject(insight);
+	      expect(stored[0].evidenceQuotes).toEqual([]);
+	    });
 
     it('같은 id의 인사이트를 업데이트한다', () => {
       const id = crypto.randomUUID();
@@ -988,26 +997,231 @@ describe('fallback storage', () => {
     });
   });
 
+  describe('updateFallbackJournalEntry', () => {
+    it('기존 엔트리의 timestamp는 유지하고 content/lastModified만 갱신한다', () => {
+      const entryId = crypto.randomUUID();
+      const ts = Date.now() - 10_000;
+      saveFallbackJournalEntry({
+        id: entryId,
+        content: 'old',
+        timestamp: ts,
+        type: 'journal',
+      });
+
+      const now = Date.now();
+      updateFallbackJournalEntry(entryId, 'new', now);
+
+      const entries = loadFallbackJournalEntries();
+      const updated = entries.find((item) => item.id === entryId);
+      expect(updated).toBeTruthy();
+      expect(updated?.content).toBe('new');
+      expect(updated?.timestamp).toBe(ts);
+      expect(updated?.lastModified).toBe(now);
+    });
+  });
+
+  describe('upsertFallbackInsightByEntryId', () => {
+    it('entryId 기준으로 1개만 유지하며 업데이트한다', () => {
+      const entryId = crypto.randomUUID();
+      const ts = Date.now() - 5_000;
+
+      upsertFallbackInsightByEntryId(
+        entryId,
+        { archetypes: ['A'], hiddenPatterns: ['P'], criticalQuestions: ['Q'] },
+        ts,
+        ts + 1,
+      );
+
+      let insights = loadFallbackInsights().filter((item) => item.entryId === entryId);
+      expect(insights).toHaveLength(1);
+      const firstId = insights[0].id;
+      expect(insights[0].archetypes).toEqual(['A']);
+      expect(insights[0].timestamp).toBe(ts);
+      expect(insights[0].lastModified).toBe(ts + 1);
+
+      upsertFallbackInsightByEntryId(entryId, { archetypes: ['B'] }, ts, ts + 2);
+
+      insights = loadFallbackInsights().filter((item) => item.entryId === entryId);
+      expect(insights).toHaveLength(1);
+      expect(insights[0].id).toBe(firstId);
+      expect(insights[0].archetypes).toEqual(['B']);
+      expect(insights[0].lastModified).toBe(ts + 2);
+    });
+  });
+
+  describe('deleteFallbackJournalEntryCascade', () => {
+    it('저널/인사이트를 삭제하고 스킬 sourceEntryIds를 정리하며 tombstone을 기록한다', () => {
+      const entryId = crypto.randomUUID();
+      const otherEntryId = crypto.randomUUID();
+      const ts = Date.now() - 20_000;
+
+      saveFallbackJournalEntry({
+        id: entryId,
+        content: 'to delete',
+        timestamp: ts,
+        type: 'journal',
+      });
+
+      // Insight linked to entry
+      const insightId = crypto.randomUUID();
+      addFallbackInsight({
+        id: insightId,
+        entryId,
+        archetypes: ['X'],
+        hiddenPatterns: [],
+        criticalQuestions: [],
+        timestamp: ts,
+      });
+
+      // Skill that will be removed (only this entry as source)
+      upsertFallbackSkill({ name: 'Skill One', category: 'hard' }, entryId);
+      const skillOneId = loadFallbackSkills().find((s) => s.name === 'Skill One')?.id;
+      expect(skillOneId).toBeTruthy();
+
+      // Skill that should remain (has another source)
+      upsertFallbackSkill({ name: 'Skill Two', category: 'hard' }, entryId);
+      upsertFallbackSkill({ name: 'Skill Two', category: 'hard' }, otherEntryId);
+
+      const now = Date.now();
+      deleteFallbackJournalEntryCascade(entryId, now);
+
+      expect(loadFallbackJournalEntries().some((item) => item.id === entryId)).toBe(false);
+      expect(loadFallbackInsights().some((item) => item.id === insightId)).toBe(false);
+
+      const skills = loadFallbackSkills();
+      expect(skills.some((item) => item.name === 'Skill One')).toBe(false);
+      const skillTwo = skills.find((item) => item.name === 'Skill Two');
+      expect(skillTwo).toBeTruthy();
+      expect(skillTwo?.sourceEntryIds).toEqual([otherEntryId]);
+
+      const raw = localStorage.getItem('MYSTATS_TOMBSTONES_V1');
+      expect(raw).toBeTruthy();
+      const tombstones = JSON.parse(raw || '[]') as Array<{ kind?: string; id?: string; lastModified?: number }>;
+      expect(tombstones.some((t) => t.kind === 'journal' && t.id === entryId && t.lastModified === now)).toBe(true);
+      expect(tombstones.some((t) => t.kind === 'insights' && t.id === insightId && t.lastModified === now)).toBe(true);
+      expect(tombstones.some((t) => t.kind === 'skills' && t.id === skillOneId && t.lastModified === now)).toBe(true);
+    });
+  });
+
+  describe('fallback solutions', () => {
+    it('빈 배열을 반환한다 (저장소가 비어있을 때)', () => {
+      expect(loadFallbackSolutions()).toEqual([]);
+    });
+
+    it('저장된 솔루션을 timestamp 내림차순으로 반환한다', () => {
+      const now = Date.now();
+      const items: Solution[] = [
+        { id: crypto.randomUUID(), problem: 'p1', solution: 's1', timestamp: now - 3000 },
+        { id: crypto.randomUUID(), problem: 'p2', solution: 's2', timestamp: now - 1000 },
+        { id: crypto.randomUUID(), problem: 'p3', solution: 's3', timestamp: now - 2000 },
+      ];
+
+      localStorage.setItem(FALLBACK_KEYS.solutions, JSON.stringify(items));
+
+      const result = loadFallbackSolutions();
+      expect(result).toHaveLength(3);
+      expect(result[0].problem).toBe('p2');
+      expect(result[1].problem).toBe('p3');
+      expect(result[2].problem).toBe('p1');
+    });
+
+    it('problem/solution을 trim하고 빈 값은 필터링한다', () => {
+      const now = Date.now();
+      const items = [
+        { id: crypto.randomUUID(), problem: '  hello  ', solution: '  world  ', timestamp: now },
+        { id: crypto.randomUUID(), problem: '   ', solution: 'nope', timestamp: now - 10 },
+        { id: crypto.randomUUID(), problem: 'ok', solution: '   ', timestamp: now - 20 },
+      ];
+
+      localStorage.setItem(FALLBACK_KEYS.solutions, JSON.stringify(items));
+      const result = loadFallbackSolutions();
+      expect(result).toHaveLength(1);
+      expect(result[0].problem).toBe('hello');
+      expect(result[0].solution).toBe('world');
+    });
+
+    it('timestamp 문자열을 숫자로 변환한다', () => {
+      const id = crypto.randomUUID();
+      const timestamp = '2025-01-29T10:00:00Z';
+      localStorage.setItem(
+        FALLBACK_KEYS.solutions,
+        JSON.stringify([{ id, problem: 'p', solution: 's', timestamp }])
+      );
+
+      const result = loadFallbackSolutions();
+      expect(result).toHaveLength(1);
+      expect(result[0].timestamp).toBe(new Date(timestamp).getTime());
+    });
+
+    it('saveFallbackSolution은 최대 100개만 유지한다', () => {
+      const now = Date.now();
+      for (let i = 0; i < 120; i += 1) {
+        saveFallbackSolution({
+          id: crypto.randomUUID(),
+          problem: `p${i}`,
+          solution: `s${i}`,
+          timestamp: now + i,
+        });
+      }
+
+      expect(loadFallbackSolutions()).toHaveLength(100);
+    });
+
+    it('replaceFallbackSolutions는 id 기준으로 중복을 제거한다', () => {
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      replaceFallbackSolutions([
+        { id, problem: 'p1', solution: 's1', timestamp: now - 1000 },
+        { id, problem: 'p2', solution: 's2', timestamp: now },
+      ]);
+
+      const result = loadFallbackSolutions();
+      expect(result).toHaveLength(1);
+      expect(result[0].problem).toBe('p2');
+    });
+
+    it('deleteFallbackSolution은 해당 id를 제거한다', () => {
+      const now = Date.now();
+      const keepId = crypto.randomUUID();
+      const deleteId = crypto.randomUUID();
+
+      replaceFallbackSolutions([
+        { id: keepId, problem: 'keep', solution: 'ok', timestamp: now - 1000 },
+        { id: deleteId, problem: 'delete', solution: 'no', timestamp: now },
+      ]);
+
+      deleteFallbackSolution(deleteId);
+      const result = loadFallbackSolutions();
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(keepId);
+    });
+  });
+
   describe('edge cases', () => {
     it('빈 배열에서도 모든 작업이 동작한다', () => {
       expect(loadFallbackJournalEntries()).toEqual([]);
       expect(loadFallbackSkills()).toEqual([]);
       expect(loadFallbackInsights()).toEqual([]);
+      expect(loadFallbackSolutions()).toEqual([]);
 
       clearFallbackData();
       expect(loadFallbackJournalEntries()).toEqual([]);
       expect(loadFallbackSkills()).toEqual([]);
       expect(loadFallbackInsights()).toEqual([]);
+      expect(loadFallbackSolutions()).toEqual([]);
     });
 
     it('잘못된 데이터를 복원력 있게 처리한다', () => {
       localStorage.setItem(FALLBACK_KEYS.journal, 'not valid json');
       localStorage.setItem(FALLBACK_KEYS.skills, '{"not": "an array"}');
       localStorage.setItem(FALLBACK_KEYS.insights, 'null');
+      localStorage.setItem(FALLBACK_KEYS.solutions, 'null');
 
       expect(loadFallbackJournalEntries()).toEqual([]);
       expect(loadFallbackSkills()).toEqual([]);
       expect(loadFallbackInsights()).toEqual([]);
+      expect(loadFallbackSolutions()).toEqual([]);
     });
   });
 });

@@ -10,6 +10,7 @@ export type BackupCollections = {
 export type BackupFallbackCollections = {
   journal: unknown[];
   skills: unknown[];
+  solutions: unknown[];
   insights: unknown[];
 };
 
@@ -40,16 +41,17 @@ export function parseBackupPayload(raw: unknown): ParsedBackup {
         : []
     : [];
   const fallbackSkills = fallbackObj ? asArray(fallbackObj.skills) : [];
+  const fallbackSolutions = fallbackObj ? asArray(fallbackObj.solutions) : [];
   const fallbackInsights = fallbackObj ? asArray(fallbackObj.insights) : [];
 
   return {
     base: { journal, skills, solutions, insights },
-    fallback: { journal: fallbackJournal, skills: fallbackSkills, insights: fallbackInsights },
+    fallback: { journal: fallbackJournal, skills: fallbackSkills, solutions: fallbackSolutions, insights: fallbackInsights },
   };
 }
 
 export function hasAnyFallbackCollections(fallback: BackupFallbackCollections): boolean {
-  return fallback.journal.length > 0 || fallback.skills.length > 0 || fallback.insights.length > 0;
+  return fallback.journal.length > 0 || fallback.skills.length > 0 || fallback.insights.length > 0 || fallback.solutions.length > 0;
 }
 
 export function mergeById<T extends { id?: string }>(items: T[]): T[] {
@@ -68,4 +70,3 @@ export type ImportCollections = {
   solutions: { id?: string }[];
   insights: Insight[];
 };
-

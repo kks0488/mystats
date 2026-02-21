@@ -1,5 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { z } from 'zod';
+import { upsertTombstone } from '@/lib/tombstones';
 
 // --- Zod Schemas for Production Validation ---
 
@@ -38,6 +39,17 @@ export const SolutionSchema = z.object({
   id: z.string().uuid(),
   problem: z.string().min(1),
   solution: z.string().min(1),
+  sourceEntryIds: z.array(z.string().uuid()).optional(),
+  sourceSkillNames: z.array(z.string()).optional(),
+  sourceArchetypes: z.array(z.string()).optional(),
+  memuContext: z
+    .object({
+      engine: z.enum(['embedded', 'api']),
+      personalHits: z.number().finite().nonnegative(),
+      projectHits: z.number().finite().nonnegative(),
+      failed: z.boolean().optional(),
+    })
+    .optional(),
   timestamp: z.union([
     z.number().finite(),
     z.string().transform((v) => new Date(v).getTime()).pipe(z.number().finite()),
@@ -57,6 +69,7 @@ export const InsightSchema = z.object({
   archetypes: z.array(z.string()).default([]),
   hiddenPatterns: z.array(z.string()).default([]),
   criticalQuestions: z.array(z.string()).default([]),
+  evidenceQuotes: z.array(z.string()).optional(),
   timestamp: z.union([
     z.number().finite(),
     z.string().transform((v) => new Date(v).getTime()).pipe(z.number().finite()),
@@ -404,4 +417,137 @@ export const upsertSkill = async (
     }
     await tx.done;
     await updateMirror();
+};
+
+export const updateJournalEntry = async (
+  db: IDBPDatabase<MyStatsDB>,
+  entryId: string,
+  content: string,
+  lastModified: number = Date.now()
+): Promise<JournalEntry | null> => {
+  const cleanId = (entryId || '').trim();
+  if (!cleanId) return null;
+
+  const tx = db.transaction('journal', 'readwrite');
+  const store = tx.objectStore('journal');
+  const existing = await store.get(cleanId);
+  if (!existing) {
+    await tx.done;
+    return null;
+  }
+  const updated: JournalEntry = {
+    ...existing,
+    content,
+    lastModified,
+  };
+  JournalEntrySchema.parse(updated);
+  await store.put(updated);
+  await tx.done;
+  return updated;
+};
+
+export const upsertInsightByEntryId = async (
+  db: IDBPDatabase<MyStatsDB>,
+  entryId: string,
+  patch: Partial<
+    Pick<Insight, 'title' | 'content' | 'archetypes' | 'hiddenPatterns' | 'criticalQuestions' | 'evidenceQuotes'>
+  >,
+  entryTimestamp: number,
+  lastModified: number = Date.now()
+): Promise<Insight> => {
+  const cleanEntryId = (entryId || '').trim();
+  if (!cleanEntryId) {
+    throw new Error('entryId required');
+  }
+  const tx = db.transaction('insights', 'readwrite');
+  const store = tx.objectStore('insights');
+
+  const existing = await store.index('by-entry').getAll(cleanEntryId);
+  const keep = existing
+    .slice()
+    .sort((a, b) => (b.lastModified ?? b.timestamp ?? 0) - (a.lastModified ?? a.timestamp ?? 0))[0];
+
+  const keepId = keep?.id ?? crypto.randomUUID();
+  for (const item of existing) {
+    if (item.id !== keepId) {
+      await store.delete(item.id);
+    }
+  }
+
+  const next: Insight = {
+    id: keepId,
+    entryId: cleanEntryId,
+    title: patch.title ?? keep?.title,
+    content: patch.content ?? keep?.content,
+    archetypes: patch.archetypes ?? keep?.archetypes ?? [],
+    hiddenPatterns: patch.hiddenPatterns ?? keep?.hiddenPatterns ?? [],
+    criticalQuestions: patch.criticalQuestions ?? keep?.criticalQuestions ?? [],
+    evidenceQuotes: patch.evidenceQuotes ?? keep?.evidenceQuotes ?? [],
+    timestamp: entryTimestamp,
+    lastModified,
+  };
+  InsightSchema.parse(next);
+  await store.put(next);
+  await tx.done;
+  return next;
+};
+
+export const deleteJournalEntryCascade = async (
+  db: IDBPDatabase<MyStatsDB>,
+  entryId: string,
+  tombstoneTs: number = Date.now()
+): Promise<{
+  deleted: boolean;
+  deletedInsightIds: string[];
+  deletedSkillIds: string[];
+}> => {
+  const cleanEntryId = (entryId || '').trim();
+  const ts = Number.isFinite(Number(tombstoneTs)) && Number(tombstoneTs) > 0 ? Number(tombstoneTs) : Date.now();
+
+  const tx = db.transaction(['journal', 'insights', 'skills'], 'readwrite');
+  const journalStore = tx.objectStore('journal');
+  const insightStore = tx.objectStore('insights');
+  const skillStore = tx.objectStore('skills');
+
+  const existingEntry = cleanEntryId ? await journalStore.get(cleanEntryId) : null;
+  if (existingEntry) {
+    await journalStore.delete(cleanEntryId);
+  }
+
+  const insights = cleanEntryId ? await insightStore.index('by-entry').getAll(cleanEntryId) : [];
+  const deletedInsightIds = insights.map((item) => item.id);
+  for (const insight of insights) {
+    await insightStore.delete(insight.id);
+  }
+
+  const skills = await skillStore.getAll();
+  const deletedSkillIds: string[] = [];
+  for (const skill of skills) {
+    if (!Array.isArray(skill.sourceEntryIds) || !skill.sourceEntryIds.includes(cleanEntryId)) continue;
+    const remaining = skill.sourceEntryIds.filter((id) => id !== cleanEntryId);
+    if (remaining.length === 0) {
+      await skillStore.delete(skill.id);
+      deletedSkillIds.push(skill.id);
+      continue;
+    }
+    const updated: Skill = { ...skill, sourceEntryIds: remaining, lastModified: ts };
+    SkillSchema.parse(updated);
+    await skillStore.put(updated);
+  }
+
+  await tx.done;
+
+  // Tombstones are stored outside IndexedDB so deletes can sync and not resurrect.
+  if (cleanEntryId) {
+    upsertTombstone('journal', cleanEntryId, ts);
+  }
+  for (const id of deletedInsightIds) {
+    upsertTombstone('insights', id, ts);
+  }
+  for (const id of deletedSkillIds) {
+    upsertTombstone('skills', id, ts);
+  }
+
+  await updateMirror();
+  return { deleted: Boolean(existingEntry), deletedInsightIds, deletedSkillIds };
 };

@@ -21,18 +21,20 @@ describe('backup/parseBackupPayload', () => {
       fallback: {
         entries: [{ id: 'b' }],
         skills: [{ id: 'c' }],
+        solutions: [{ id: 'e' }],
         insights: [{ id: 'd' }],
       },
     });
     expect(parsed.fallback.journal).toEqual([{ id: 'b' }]);
     expect(parsed.fallback.skills).toEqual([{ id: 'c' }]);
+    expect(parsed.fallback.solutions).toEqual([{ id: 'e' }]);
     expect(parsed.fallback.insights).toEqual([{ id: 'd' }]);
   });
 
   it('tolerates non-object inputs', () => {
     const parsed = parseBackupPayload(null);
     expect(parsed.base).toEqual({ journal: [], skills: [], solutions: [], insights: [] });
-    expect(parsed.fallback).toEqual({ journal: [], skills: [], insights: [] });
+    expect(parsed.fallback).toEqual({ journal: [], skills: [], solutions: [], insights: [] });
   });
 
   it('treats non-array fields as empty', () => {
@@ -43,11 +45,11 @@ describe('backup/parseBackupPayload', () => {
 
 describe('backup/hasAnyFallbackCollections', () => {
   it('returns false when all empty', () => {
-    expect(hasAnyFallbackCollections({ journal: [], skills: [], insights: [] })).toBe(false);
+    expect(hasAnyFallbackCollections({ journal: [], skills: [], solutions: [], insights: [] })).toBe(false);
   });
 
   it('returns true when any has items', () => {
-    expect(hasAnyFallbackCollections({ journal: [{ id: 1 }], skills: [], insights: [] })).toBe(true);
+    expect(hasAnyFallbackCollections({ journal: [{ id: 1 }], skills: [], solutions: [], insights: [] })).toBe(true);
   });
 });
 
@@ -57,4 +59,3 @@ describe('backup/mergeById', () => {
     expect(merged).toEqual([{ id: 'x', v: 2 }, { id: 'y', v: 3 }]);
   });
 });
-

@@ -12,6 +12,8 @@ describe('debug/buildDebugReport', () => {
       enabled: false,
       autoSync: true,
       lastSyncedAt: null,
+      cooldownUntil: null,
+      lastResult: null,
     });
   });
 
@@ -27,6 +29,8 @@ describe('debug/buildDebugReport', () => {
       enabled: true,
       autoSync: false,
       lastSyncedAt: 1700000000000,
+      cooldownUntil: null,
+      lastResult: null,
     });
   });
 
@@ -37,7 +41,8 @@ describe('debug/buildDebugReport', () => {
       enabled: false,
       autoSync: true,
       lastSyncedAt: null,
+      cooldownUntil: null,
+      lastResult: null,
     });
   });
 });
-

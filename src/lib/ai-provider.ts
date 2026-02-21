@@ -4,11 +4,10 @@
  */
 
 import { z } from 'zod';
-import OpenAI from 'openai';
 
 // --- Types ---
 
-export type AIProvider = 'gemini' | 'openai' | 'claude' | 'grok';
+export type AIProvider = 'openai' | 'gemini' | 'claude' | 'grok';
 
 export interface AIConfig {
   provider: AIProvider;
@@ -17,22 +16,22 @@ export interface AIConfig {
 }
 
 export const AI_PROVIDERS: Record<AIProvider, { name: string; models: string[]; defaultModel: string; apiUrl: string }> = {
-  gemini: {
-    name: 'Gemini (OpenAI Gateway)',
-    models: ['gpt-5.2', 'gpt-5', 'gpt-5-mini', 'gpt-4o', 'gpt-4o-mini'],
-    defaultModel: 'gpt-5.2',
-    apiUrl: 'http://localhost:8317/v1',
-  },
   openai: {
     name: 'OpenAI',
-    models: ['gpt-5.2-2025-12-11', 'gpt-5', 'gpt-5-mini', 'gpt-4o', 'gpt-4o-mini'],
-    defaultModel: 'gpt-5.2-2025-12-11',
+    models: ['gpt-5.2', 'gpt-5.1', 'gpt-5', 'gpt-5-mini', 'gpt-4.1', 'o4-mini', 'gpt-4o'],
+    defaultModel: 'gpt-4o',
     apiUrl: 'https://api.openai.com/v1',
+  },
+  gemini: {
+    name: 'Google Gemini',
+    models: ['gemini-3.1-pro-preview', 'gemini-3-flash-preview', 'gemini-3-pro-preview', 'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'],
+    defaultModel: 'gemini-2.5-flash',
+    apiUrl: 'https://generativelanguage.googleapis.com/v1beta',
   },
   claude: {
     name: 'Anthropic Claude',
-    models: ['claude-opus-4.5-20251124', 'claude-sonnet-4.5-20250929', 'claude-opus-4.1-20250801', 'claude-sonnet-4-20250522'],
-    defaultModel: 'claude-opus-4.5-20251124',
+    models: ['claude-sonnet-4-5-20250514', 'claude-haiku-4-5-20251001', 'claude-sonnet-4-20250514'],
+    defaultModel: 'claude-sonnet-4-5-20250514',
     apiUrl: 'https://api.anthropic.com/v1',
   },
   grok: {
@@ -80,7 +79,7 @@ export const getProviderConfig = (provider: AIProvider): AIConfig => {
 };
 
 export const getAIConfig = (): AIConfig => {
-  const provider = (safeLocalStorageGet(STORAGE_KEYS.provider) as AIProvider) || 'gemini';
+  const provider = (safeLocalStorageGet(STORAGE_KEYS.provider) as AIProvider) || 'openai';
   return getProviderConfig(provider);
 };
 
@@ -113,22 +112,21 @@ const buildAnalysisPrompt = (language: 'en' | 'ko') => {
       : 'Respond in ENGLISH only. Do NOT include Korean.';
   const insightRequirement =
     language === 'ko'
-      ? `**Bilingual Requirement**: 
-ALL output strings in "insight" (archetypes, hiddenPatterns, criticalQuestions) MUST follow the format: 
-"Korean Description (English Translation)"`
+      ? `**Language Requirement**:
+ALL output must be in Korean only. Do NOT include English translations in parentheses.`
       : `**Language Requirement**:
 All output must be English only. Do NOT include Korean.`;
   const archetypeFormat =
     language === 'ko'
-      ? "String (Format: '한글 명칭 (English Title)')"
+      ? "String (한국어로만 작성)"
       : 'String (English only)';
   const patternFormat =
     language === 'ko'
-      ? "String (Format: '당신의 존재는... (Your existence is...)')"
+      ? "String (한국어로만 작성)"
       : 'String (English only)';
 	const questionFormat =
 	  language === 'ko'
-	    ? "String (Format: '한글 질문? (English Question?)')"
+	    ? "String (한국어로만 작성)"
 	    : 'String (English only)';
 	const evidenceFormat =
 	  language === 'ko'
@@ -186,7 +184,7 @@ Analyze the text and return a JSON object with this EXACT structure:
 	`;
 	};
 
-export const STRATEGY_PROMPT = `
+export const STRATEGY_PROMPT_EN = `
 You are "The Strategist", a ruthless but supportive AI mentor.
 The User has a Problem. You generally know their Profile.
 Your goal is to give them a "Crazy Good" solution that they wouldn't have thought of.
@@ -209,6 +207,33 @@ Output Format (Markdown):
 
 ## 🛡️ Critical Warning
 (What will likely trip you up based on your profile)
+`;
+
+export const STRATEGY_PROMPT_KO = `
+당신은 "전략가"입니다. 냉철하지만 든든한 AI 멘토입니다.
+사용자에게 문제가 있고, 당신은 그들의 프로필을 파악하고 있습니다.
+사용자가 스스로 생각하지 못했을 "놀라운 해결책"을 제시하세요.
+
+**지시사항**:
+1. **비대칭 우위 파악**: 이 사용자만이 가진 강점으로 문제를 더 쉽게 풀 수 있는 지점을 찾으세요.
+2. **멘탈 모델 적용**: "제1원칙 사고", "80/20 법칙", "역전 사고", "게이미피케이션" 등의 프레임워크를 활용하세요.
+3. **구체적으로**: "소통을 개선하라"가 아니라 "매주 금요일 3줄 요약 이메일을 보내라"처럼 구체적으로 적으세요.
+
+모든 출력은 반드시 한국어로만 작성하세요.
+
+출력 형식 (Markdown):
+## ⚡ 나만의 비대칭 우위
+(이 문제를 풀기에 당신이 유리한 이유)
+
+## 🧠 핵심 전략 (멘탈 모델: [이름])
+(핵심 접근법)
+
+## 👣 실행 계획
+1. 1단계
+2. 2단계
+
+## 🛡️ 주의 사항
+(프로필 기반으로 당신이 빠지기 쉬운 함정)
 `;
 
 // --- Zod Schemas ---
@@ -253,40 +278,11 @@ export type AnalysisResult = z.infer<typeof AnalysisResultSchema>;
 // --- API Calls ---
 
 const callGemini = async (prompt: string, apiKey: string, model: string): Promise<string> => {
-  try {
-    const openai = new OpenAI({
-      apiKey:
-        (typeof process !== 'undefined' && process?.env?.OPENAI_API_KEY) ||
-        apiKey,
-      baseURL: 'http://localhost:8317/v1',
-      dangerouslyAllowBrowser: true,
-    });
-
-    const response = await openai.chat.completions.create({
-      model:
-        (typeof process !== 'undefined' && process?.env?.OPENAI_MODEL) ||
-        model ||
-        'gpt-5.2',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7,
-    });
-
-    const content: unknown = response.choices?.[0]?.message?.content;
-    if (typeof content === 'string') return content;
-    if (Array.isArray(content)) {
-      const text = (content as Array<{ type?: string; text?: string }>)
-        .map((item) => (item?.type === 'text' ? item.text || '' : ''))
-        .join('');
-      if (text) return text;
-    }
-    throw new Error('OpenAI returned empty content');
-  } catch {
-    const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const geminiModel = genAI.getGenerativeModel({ model });
-    const result = await geminiModel.generateContent(prompt);
-    return result.response.text();
-  }
+  const { GoogleGenerativeAI } = await import('@google/generative-ai');
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const geminiModel = genAI.getGenerativeModel({ model });
+  const result = await geminiModel.generateContent(prompt);
+  return result.response.text();
 };
 
 const callOpenAI = async (prompt: string, apiKey: string, model: string): Promise<string> => {
@@ -421,16 +417,17 @@ export const generateStrategy = async (
   problem: string, 
   language: 'en' | 'ko' = 'en'
 ): Promise<string> => {
-  const languagePrompt = language === 'ko' ? "Respond in KOREAN." : "Respond in ENGLISH.";
-  
-  const finalPrompt = `${STRATEGY_PROMPT}
+  const isKo = language === 'ko';
+  const strategyPrompt = isKo ? STRATEGY_PROMPT_KO : STRATEGY_PROMPT_EN;
+  const profileLabel = isKo ? '사용자 프로필' : 'User Profile';
+  const problemLabel = isKo ? '문제' : 'Problem';
 
-Language Instruction: ${languagePrompt}
+  const finalPrompt = `${strategyPrompt}
 
-User Profile:
+${profileLabel}:
 ${userProfileContext}
 
-Problem:
+${problemLabel}:
 ${problem}`;
   
   return callAI(finalPrompt);

@@ -32,7 +32,7 @@ describe('ai-provider storage', () => {
     });
 
     expect(() => getAIConfig()).not.toThrow();
-    expect(getAIConfig().provider).toBe('gemini');
+    expect(getAIConfig().provider).toBe('openai');
     expect(() => setAIConfig({ provider: 'openai', apiKey: 'x' })).not.toThrow();
     expect(checkAIStatus().configured).toBe(false);
 

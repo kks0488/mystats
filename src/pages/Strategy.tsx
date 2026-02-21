@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 
 const ReactMarkdown = React.lazy(() => import('react-markdown'));
+import remarkGfm from 'remark-gfm';
 import { getDB, DB_ERRORS, type JournalEntry, type Skill, type Insight, type Solution } from '../db/db';
 import { getFallbackStorageMode, loadFallbackJournalEntries, loadFallbackSkills, loadFallbackInsights, loadFallbackSolutions, saveFallbackSolution, deleteFallbackSolution } from '../db/fallback';
 import { generateStrategy, checkAIStatus } from '../lib/ai-provider';
@@ -1181,7 +1182,7 @@ export const Strategy = () => {
                                             </div>
                                         )}
                                         <Suspense fallback={<div className="animate-pulse text-muted-foreground">{t('thinking')}</div>}>
-                                            <ReactMarkdown>{solution}</ReactMarkdown>
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{solution}</ReactMarkdown>
                                         </Suspense>
                                     </motion.div>
                                 ) : (
