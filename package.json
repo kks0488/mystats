@@ -52,7 +52,7 @@
     "framer-motion": "^12.23.26",
     "idb": "^8.0.3",
     "lucide-react": "^0.562.0",
-    "openai": "^6.21.0",
+    "openai": "^6.22.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
