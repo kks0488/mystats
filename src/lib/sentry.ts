@@ -10,6 +10,10 @@ export async function initSentry(): Promise<void> {
     environment: import.meta.env.MODE,
     release: __APP_VERSION__,
     tracesSampleRate: 0,
+    beforeSend(event) {
+      if (event.user) event.user = { ...event.user, ip_address: undefined };
+      return event;
+    },
   });
 
   try {

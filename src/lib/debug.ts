@@ -77,15 +77,15 @@ export function buildDebugReport(): Record<string, unknown> {
       autoSync: parsed && 'autoSync' in parsed ? Boolean(parsed.autoSync) : true,
       lastSyncedAt: safeLocalStorageGetNumber('MYSTATS_CLOUD_SYNC_LAST_SYNC_V1'),
       cooldownUntil: safeLocalStorageGetNumber('MYSTATS_CLOUD_SYNC_COOLDOWN_UNTIL_V1'),
-      lastResult,
+      lastResultOk: lastResult ? Boolean((lastResult as Record<string, unknown>).ok ?? (lastResult as Record<string, unknown>).success) : null,
     };
   })();
 
   return {
     generatedAt: new Date().toISOString(),
     appVersion: __APP_VERSION__,
-    location: typeof window !== 'undefined' ? window.location.href : null,
-    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+    pathname: typeof window !== 'undefined' ? window.location.pathname : null,
+    platform: typeof navigator !== 'undefined' ? navigator.platform : null,
     language: safeLocalStorageGet('app_lang'),
     ai,
     memu,

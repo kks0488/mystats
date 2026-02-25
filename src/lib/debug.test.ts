@@ -13,7 +13,7 @@ describe('debug/buildDebugReport', () => {
       autoSync: true,
       lastSyncedAt: null,
       cooldownUntil: null,
-      lastResult: null,
+      lastResultOk: null,
     });
   });
 
@@ -30,7 +30,7 @@ describe('debug/buildDebugReport', () => {
       autoSync: false,
       lastSyncedAt: 1700000000000,
       cooldownUntil: null,
-      lastResult: null,
+      lastResultOk: null,
     });
   });
 
@@ -42,7 +42,7 @@ describe('debug/buildDebugReport', () => {
       autoSync: true,
       lastSyncedAt: null,
       cooldownUntil: null,
-      lastResult: null,
+      lastResultOk: null,
     });
   });
 });
