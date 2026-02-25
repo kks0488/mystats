@@ -1,11 +1,14 @@
 {
-  "crons": [
-    {
-      "path": "/api/keep-alive",
-      "schedule": "0 6 * * *"
-    }
-  ],
   "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.openai.com https://generativelanguage.googleapis.com https://api.anthropic.com https://api.x.ai https://*.supabase.co https://*.ingest.sentry.io; worker-src 'self' blob:; manifest-src 'self'"
+        }
+      ]
+    },
     {
       "source": "/sw.js",
       "headers": [

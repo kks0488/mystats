@@ -393,8 +393,16 @@ export const upsertSkill = async (
     const tx = db.transaction('skills', 'readwrite');
     const store = tx.objectStore('skills');
     
-    const allSkills = await store.getAll();
-    const existingSkill = allSkills.find(s => s.name.toLowerCase() === skillData.name.toLowerCase());
+    const normalizedName = skillData.name.toLowerCase();
+    let existingSkill: Skill | null = null;
+    let cursor = await store.openCursor();
+    while (cursor) {
+        if (cursor.value.name.toLowerCase() === normalizedName) {
+            existingSkill = cursor.value;
+            break;
+        }
+        cursor = await cursor.continue();
+    }
 
     if (existingSkill) {
         if (!existingSkill.sourceEntryIds.includes(entryId)) {
