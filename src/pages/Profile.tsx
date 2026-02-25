@@ -182,41 +182,57 @@ export const Profile = () => {
 
             const total = entries.length;
             let current = 0;
-            for (const entry of entries) {
-                current += 1;
-                setRebuildProgress({ current, total });
-                const result = await analyzeEntryWithAI(entry.content, language);
+            const CONCURRENCY = 3;
 
-                if (result.insight) {
-                    const insightData: Insight = {
-                        id: crypto.randomUUID(),
-                        entryId: entry.id,
-                        ...result.insight,
-                        timestamp: entry.timestamp,
-                        lastModified: Date.now()
-                    };
-                    if (useFallback) {
-                        addFallbackInsight(insightData);
-                    } else if (db) {
-                        await db.put('insights', insightData);
+            for (let i = 0; i < entries.length; i += CONCURRENCY) {
+                const batch = entries.slice(i, i + CONCURRENCY);
+                const batchResults = await Promise.allSettled(
+                    batch.map(entry => analyzeEntryWithAI(entry.content, language))
+                );
+
+                for (let j = 0; j < batch.length; j++) {
+                    current += 1;
+                    setRebuildProgress({ current, total });
+
+                    const settled = batchResults[j];
+                    if (settled.status === 'rejected') {
+                        console.error(`Rebuild: entry ${batch[j].id} failed`, settled.reason);
+                        continue;
                     }
-                }
+                    const result = settled.value;
+                    const entry = batch[j];
 
-                const categories: Array<{ items?: { name: string, category?: string }[], defaultCategory?: Skill['category'] }> = [
-                    { items: result.skills, defaultCategory: 'hard' },
-                    { items: result.traits, defaultCategory: 'trait' },
-                    { items: result.experiences, defaultCategory: 'experience' },
-                    { items: result.interests, defaultCategory: 'interest' }
-                ];
+                    if (result.insight) {
+                        const insightData: Insight = {
+                            id: crypto.randomUUID(),
+                            entryId: entry.id,
+                            ...result.insight,
+                            timestamp: entry.timestamp,
+                            lastModified: Date.now()
+                        };
+                        if (useFallback) {
+                            addFallbackInsight(insightData);
+                        } else if (db) {
+                            await db.put('insights', insightData);
+                        }
+                    }
 
-                for (const group of categories) {
-                    if (group.items) {
-                        for (const item of group.items) {
-                            const category = (item.category ?? group.defaultCategory) as Skill['category'];
-                            if (useFallback) {
-                                upsertFallbackSkill({ name: item.name, category }, entry.id);
-                            } else {
-                                await upsertSkill({ name: item.name, category }, entry.id);
+                    const categories: Array<{ items?: { name: string, category?: string }[], defaultCategory?: Skill['category'] }> = [
+                        { items: result.skills, defaultCategory: 'hard' },
+                        { items: result.traits, defaultCategory: 'trait' },
+                        { items: result.experiences, defaultCategory: 'experience' },
+                        { items: result.interests, defaultCategory: 'interest' }
+                    ];
+
+                    for (const group of categories) {
+                        if (group.items) {
+                            for (const item of group.items) {
+                                const category = (item.category ?? group.defaultCategory) as Skill['category'];
+                                if (useFallback) {
+                                    upsertFallbackSkill({ name: item.name, category }, entry.id);
+                                } else {
+                                    await upsertSkill({ name: item.name, category }, entry.id);
+                                }
                             }
                         }
                     }
