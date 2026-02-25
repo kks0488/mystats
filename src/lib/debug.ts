@@ -85,7 +85,7 @@ export function buildDebugReport(): Record<string, unknown> {
     generatedAt: new Date().toISOString(),
     appVersion: __APP_VERSION__,
     pathname: typeof window !== 'undefined' ? window.location.pathname : null,
-    platform: typeof navigator !== 'undefined' ? navigator.platform : null,
+    platform: typeof navigator !== 'undefined' ? ((navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ?? navigator.platform) : null,
     language: safeLocalStorageGet('app_lang'),
     ai,
     memu,

@@ -1,6 +1,7 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { z } from 'zod';
 import { upsertTombstone } from '@/lib/tombstones';
+import { normalizeSkillName } from '@/lib/utils';
 
 // --- Zod Schemas for Production Validation ---
 
@@ -393,11 +394,11 @@ export const upsertSkill = async (
     const tx = db.transaction('skills', 'readwrite');
     const store = tx.objectStore('skills');
     
-    const normalizedName = skillData.name.toLowerCase();
+    const normalizedName = normalizeSkillName(skillData.name).toLowerCase();
     let existingSkill: Skill | null = null;
     let cursor = await store.openCursor();
     while (cursor) {
-        if (cursor.value.name.toLowerCase() === normalizedName) {
+        if (normalizeSkillName(cursor.value.name).toLowerCase() === normalizedName) {
             existingSkill = cursor.value;
             break;
         }
@@ -413,7 +414,7 @@ export const upsertSkill = async (
     } else {
         const newSkill: Skill = {
             id: crypto.randomUUID(),
-            name: skillData.name,
+            name: normalizeSkillName(skillData.name),
             category: skillData.category,
             sourceEntryIds: [entryId],
             createdAt: Date.now(),
