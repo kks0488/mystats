@@ -42,7 +42,7 @@
     "@google/generative-ai": "^0.24.1",
     "@radix-ui/react-slot": "^1.2.4",
     "@sentry/react": "^10.36.0",
-    "@supabase/supabase-js": "^2.91.1",
+    "@supabase/supabase-js": "^2.97.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.26",
