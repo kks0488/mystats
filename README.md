@@ -1,377 +1,195 @@
 <p align="center">
-  <img src="public/logo.svg" width="80" alt="MyStats Logo" />
-</p>
-
-<h1 align="center">🧠 MyStats</h1>
-
-<p align="center">
-  <strong>AI-Powered Self-Discovery & Career Strategy Engine</strong>
+  <img src="assets/banner.png" alt="MyStats: a local-first AI journal that turns your notes into skills, patterns and a career strategy" width="100%">
 </p>
 
 <p align="center">
-  <em>Transform your scattered thoughts into actionable intelligence.<br/>Powered by Gemini, OpenAI, Claude, and Grok - built for thinkers who refuse to settle.</em>
+  <b>English</b> · <a href="README.ko.md"><b>한국어</b></a>
+</p>
+
+<h2 align="center">Write about your day.<br>MyStats turns it into your skills, patterns and a plan.</h2>
+
+<p align="center">
+  A local-first AI journal and career strategy app that runs in your browser.<br>
+  Bring your own key for Gemini, OpenAI, Claude or Grok. Your entries stay on your device.
 </p>
 
 <p align="center">
-  <a href="#features"><strong>Features</strong></a> ·
-  <a href="#3-step-usage-guide"><strong>3-Step Guide</strong></a> ·
-  <a href="#demo"><strong>Demo</strong></a> ·
-  <a href="#install-as-an-app-pwa"><strong>PWA</strong></a> ·
-  <a href="#quick-start"><strong>Quick Start</strong></a> ·
-  <a href="#memory-system-memu"><strong>Memory</strong></a> ·
-  <a href="#tech-stack"><strong>Tech Stack</strong></a> ·
-  <a href="#contributing"><strong>Contributing</strong></a>
+  <a href="https://mystats-eta.vercel.app"><img src="https://img.shields.io/badge/live%20demo-mystats--eta.vercel.app-3b82f6?style=flat-square" alt="Live demo"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/kks0488/mystats?style=flat-square" alt="License"></a>
+  <a href="https://github.com/kks0488/mystats/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/kks0488/mystats/ci.yml?branch=main&style=flat-square&label=CI" alt="CI"></a>
+  <a href="https://github.com/kks0488/mystats/releases"><img src="https://img.shields.io/github/v/release/kks0488/mystats?style=flat-square" alt="Release"></a>
+  <img src="https://img.shields.io/github/languages/top/kks0488/mystats?style=flat-square" alt="Top language">
+  <img src="https://img.shields.io/github/last-commit/kks0488/mystats?style=flat-square" alt="Last commit">
+  <a href="https://github.com/kks0488/mystats/stargazers"><img src="https://img.shields.io/github/stars/kks0488/mystats?style=flat-square" alt="Stars"></a>
 </p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react" alt="React 19" />
-  <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/Multi--AI-Ready-111827?style=flat-square" alt="Multi-AI Ready" />
-  <img src="https://img.shields.io/badge/Vite-7-646CFF?style=flat-square&logo=vite" alt="Vite" />
-  <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT License" />
-</p>
+<table>
+<tr>
+<td width="50%" valign="top">
 
-<p align="center">
-  <a href="https://github.com/kks0488/mystats/stargazers">
-    <img src="https://img.shields.io/github/stars/kks0488/mystats?style=social" alt="GitHub Stars" />
-  </a>
-  <a href="https://github.com/kks0488/mystats/network/members">
-    <img src="https://img.shields.io/github/forks/kks0488/mystats?style=social" alt="GitHub Forks" />
-  </a>
-</p>
+### Journal that reads between the lines
+Write freely. Each entry is analyzed for hard and soft skills, traits, archetypes and the questions you should be asking yourself.
 
----
+</td>
+<td width="50%" valign="top">
 
-## ✨ Why MyStats?
+### A profile that builds itself
+Skills, archetypes and hidden patterns add up across entries. One click rebuilds the whole profile from every journal entry.
 
-> **"Most productivity apps ask what you did. MyStats decodes who you are."**
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
 
-We don't just track your activities — we **uncover your hidden patterns**, identify your **psychological archetypes**, and generate **personalized strategies** that leverage your unique strengths.
+### Strategy from your own stats
+Describe a problem and get a plan that uses your strengths and warns about blind spots. Save, search and edit plans in the Strategy Vault.
 
-```
-📓 Journal Entry → 🧠 AI Analysis → 👤 Deep Profile → ⚡ Custom Strategy
-```
+</td>
+<td width="50%" valign="top">
 
----
+### Private by default
+Data lives in your browser (IndexedDB). There is no required backend. Cloud sync through Supabase is optional and only runs when you sign in.
 
-## 🎯 Features
+</td>
+</tr>
+</table>
 
-### 🧬 **Neural Memory Journal**
-Write freely. Our AI doesn't just save — it **decodes**. Every entry is analyzed for:
-- Skills (Hard & Soft)
-- Personality Traits & Patterns
-- Hidden Archetypes (e.g., "The Architect of Systems" 시스템의 설계자)
-- Critical Questions you should be asking yourself
-- **Journal Explorer**: search + multi-filter (date range, entry type, has-insight, skill categories)
-- **Draft Auto-Save**: automatic draft preservation and restore with notification
-- Ctrl+Enter (Cmd+Enter) keyboard shortcut to save
+## Try it
 
-### 🧠 **memU Memory System (Embedded)**
-MyStats now includes a built-in **memU-compatible memory layer**:
-- **Embedded mode (default)**: runs entirely in the browser (no server required)
-- Uses your **Journal entries as memory** for retrieval + similarity checks
-- Strategy generation can automatically pull relevant memories as extra context
+Open the live app: **[mystats-eta.vercel.app](https://mystats-eta.vercel.app)**
 
-### 🤖 **Multi-AI Provider Switch**
-Bring your own API key and choose your brain:
-- Gemini
-- OpenAI
-- Claude
-- Grok
+1. **Settings → API Key**: pick a provider and paste your key ([Gemini](https://aistudio.google.com/app/apikey) has a free tier).
+2. **Journal**: write anything — work, wins, failures, what you are stuck on. `Ctrl/Cmd + Enter` saves.
+3. **Profile** and **Strategy**: read your patterns, then ask for a plan.
 
-### 🪞 **Deep Intelligence Profile**
-Your cumulative psychological map — built from every journal entry. See:
-- Existential Archetypes
-- Hidden Behavioral Patterns
-- Critical Life Questions
-- Skill & Interest Radar
-- **Rebuild AI Profile**: one-click reanalysis of all journal entries to regenerate skills and insights
+It also installs as an app (PWA): on iOS use *Share → Add to Home Screen*, on Android/Chrome use *Install app*.
 
-### ⚡ **Neural Strategy Engine**
-Describe a problem. Get a **ruthlessly personalized solution**:
-- Unfair Advantage Analysis (What makes YOU uniquely positioned?)
-- Mental Model Application (First Principles, 80/20, Inversion...)
-- Concrete Action Plans
-- Personal Blind Spot Warnings
-- **Strategy Vault**: save, search, load, edit, copy, and delete generated strategies
-- **Context Builder**: manually select skills, archetypes, and journal entries as extra context
-
-### 📱 **Installable PWA (No App Store Needed)**
-MyStats can be installed like an app on mobile/desktop via PWA:
-- iOS/Android: add to Home Screen / Install app
-- Offline-friendly app shell caching (data stays local-first)
-
-### ☁️ **Cloud Sync (Beta, Optional)**
-If you sign in, you can sync your data across devices via Supabase.
-
-Current sign-in methods:
-- Google OAuth
-- GitHub OAuth (optional)
-- Email + Password
-
-Notes:
-- After OAuth redirect, the app processes the session and removes any auth tokens from the URL.
-- You must configure Supabase redirect URLs to allow your local and deployed domains (see `docs/CLOUD_SYNC.md`).
-
----
-
-## 📘 3-Step Usage Guide
-**"Input your raw thoughts, AI generates your life strategy guide."**
-
-### 1) Add an API Key
-MyStats is **local-first** with no backend.
-- **Setup:** Settings → API Key → Save
-- **Recommended:** Google Gemini (free)
-- **Privacy:** Your key/data stay only in your browser (no servers).
-
-> Optional: Settings → memU Integration → keep **Embedded** to enable local memory retrieval from your journal.
-
-### 2) Journal Freely
-Write anything in `Journal` (no format required).
-- Life path, skills/weaknesses, wins/fails, current struggles
-- **Tip:** The more specific, the sharper the analysis.
-
-### 3) Get Insights
-Once you have entries, the AI turns them into insight.
-- **🎯 Strategy:** A personalized plan based on your stats
-- **🧠 Profile:** Hidden patterns + deep questions for growth
-
----
-
-## 🎬 Demo
-
-> **🎮 Try it now:** [https://mystats-eta.vercel.app](https://mystats-eta.vercel.app)
-
----
-
-## 📲 Install as an App (PWA)
-
-### iOS (Safari)
-1. Open the demo link in Safari
-2. Tap **Share**
-3. Tap **Add to Home Screen**
-
-### Android (Chrome)
-1. Open the demo link in Chrome
-2. Tap **Install app** (or ⋮ menu → Install app)
-
-> Note: MyStats is local-first. Without cloud sync, your data is stored per device/browser.
-
-## 🧩 Chrome "App" (Toolbar Launcher Extension)
-
-If you want MyStats to behave like a simple Chrome app launcher, you can load the included extension:
-
-1. Open `chrome://extensions`
-2. Enable **Developer mode**
-3. Click **Load unpacked**
-4. Select `mystats/chrome-extension/`
-
-Click the MyStats icon in the toolbar to open (or focus) the PWA.
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js 18+
-- API key (choose one):
-  - [Google AI Studio - Gemini](https://aistudio.google.com/app/apikey) (Free)
-  - [OpenAI](https://platform.openai.com/api-keys)
-  - [Anthropic Claude](https://console.anthropic.com/settings/keys)
-  - [xAI Grok](https://console.x.ai/)
-
-### Installation
+## Run it locally
 
 ```bash
-# Clone the repository
 git clone https://github.com/kks0488/mystats.git
 cd mystats
-
-# Install dependencies
 npm install
-
-# Start dev server
-npm run dev
+npm run dev        # http://localhost:5178
 ```
 
-### Setup
-1. Open the app in your browser (check the terminal output; default is `http://localhost:5178`)
-2. Go to the Dashboard
-3. Enter your API Key (Gemini, OpenAI, Claude, or Grok)
-4. Start journaling!
+Requires Node.js 20 or later. No `.env` is needed to start; see [`.env.example`](.env.example) for the optional cloud sync, memU server and Sentry settings.
 
----
+## Screenshots
 
-## 🧠 Memory System (memU)
+<p align="center">
+  <img src="assets/screenshot.png" alt="MyStats profile page showing archetypes, a meta-pattern and a core question" width="100%">
+</p>
+<p align="center">
+  <img src="assets/screenshot-journal.png" alt="MyStats journal page with a searchable memory rail of past entries" width="100%">
+</p>
+<p align="center"><sub>Captured from a local run with sample entries (no real user data).</sub></p>
 
-MyStats ships with a **memU-compatible memory layer** that improves retrieval and strategy context.
+## How it works
 
-### Embedded (default)
-- Runs fully in the browser — **no server required**
-- Uses your **Journal entries** as the memory store (IndexedDB / fallback local storage)
-- Provides:
-  - `retrieve` (top-K similar memories)
-  - `check-similar` (similarity-based duplicate detection)
+```mermaid
+flowchart LR
+  J[Journal entry] -->|your API key| AI[Gemini / OpenAI / Claude / Grok]
+  AI --> S[Skills & traits]
+  AI --> I[Archetypes, patterns, questions]
+  S & I --> DB[(IndexedDB in your browser)]
+  DB --> P[Profile]
+  DB --> M[memU memory: similar entries]
+  P & M --> ST[Strategy engine]
+  DB -. optional .-> C[(Supabase cloud sync)]
+```
 
-### Server (optional)
-If you already run a local `memU` server, you can switch to **Server (API)** in Settings to:
-- Use the memU REST API endpoint
-- Optionally include `project-registry` memories in Strategy
+Requests go straight from your browser to the AI provider you chose. The built-in memU layer finds related past entries locally and adds them as context for strategies.
 
----
+## FAQ
 
-## 🛠 Tech Stack
+**Where is my data stored?**
+In your browser's IndexedDB (with a localStorage fallback). Export a JSON backup any time from Settings. Nothing is uploaded unless you sign in to cloud sync.
+
+**Do I need to pay for AI?**
+You use your own key. Gemini has a free tier; other providers bill you directly.
+
+**Does it work in Korean?**
+Yes. The interface switches between English and Korean from the header.
+
+## Roadmap
+
+Planned, not yet built (from the project's own plan):
+
+- **Timeline / drift**: see how your profile changes over time, with a monthly change summary
+- **Shadow profile**: a radar of six life areas that highlights the ones you rarely write about
+- **Cloud sync**: retries and a clearer sync status (sync is currently beta)
+
+<details>
+<summary><b>Technical details</b></summary>
+
+### Feature details
+
+- **Journal**: skills (hard and soft), traits, archetypes and critical questions per entry; Journal Explorer with search and filters (date range, entry type, has-insight, skill categories); draft auto-save and restore; `Ctrl/Cmd + Enter` to save.
+- **Profile**: existential archetypes, hidden behavioral patterns, critical questions, skill and interest overview, and *Rebuild AI Profile* to re-analyze all entries.
+- **Strategy**: unfair-advantage analysis, mental models (first principles, 80/20, inversion), concrete action plans, blind-spot warnings, Strategy Vault (save, search, load, edit, copy, delete) and a Context Builder to pick skills, archetypes and entries as extra context.
+- **memU memory layer**: *Embedded* mode (default) runs in the browser and uses journal entries as memory (`retrieve` top-K similar entries, `check-similar` duplicate detection). *Server (API)* mode can use a local memU REST server (`MEMU_API_URL`, default `http://localhost:8100`) and optionally include `project-registry` memories in Strategy.
+- **Cloud sync (beta, optional)**: Supabase Auth + Postgres. Sign-in with Google OAuth, GitHub OAuth (optional) or email and password. Redirect URLs must be allowed in Supabase — see [`docs/CLOUD_SYNC.md`](docs/CLOUD_SYNC.md). After the OAuth redirect, tokens are removed from the URL.
+- **Chrome launcher**: load [`chrome-extension/`](chrome-extension/) via `chrome://extensions` → Developer mode → Load unpacked to open or focus the PWA from the toolbar.
+
+### Tech stack
 
 | Category | Technology |
-|----------|------------|
-| **Framework** | React 19 + Vite 7 |
-| **Language** | TypeScript 5.9 (Strict Mode) |
-| **Styling** | Tailwind CSS 3 + shadcn/ui |
-| **Animation** | Framer Motion |
-| **AI Engine** | Gemini / OpenAI / Claude / Grok (BYOK) |
-| **Local DB** | IndexedDB (via idb) + localStorage fallback |
-| **Cloud Sync** | Supabase (Auth + Postgres, optional) |
-| **Memory** | memU (embedded browser engine or API server) |
-| **Validation** | Zod 4 |
-| **Icons** | Lucide React |
-| **Routing** | React Router 7 |
-| **Error Tracking** | Sentry (optional, lazy-loaded) |
-| **PWA** | vite-plugin-pwa (Workbox) |
-| **Testing** | Vitest + Testing Library + Playwright (E2E) |
-| **CI/CD** | GitHub Actions (CI + CodeQL + Secret Scan) → Vercel |
+| --- | --- |
+| Framework | React 19 + Vite 7 |
+| Language | TypeScript 5.9 (strict) |
+| Styling | Tailwind CSS 3 + shadcn/ui, Framer Motion |
+| AI | Gemini / OpenAI / Claude / Grok (bring your own key) |
+| Local data | IndexedDB (`idb`) + localStorage fallback |
+| Cloud sync | Supabase (optional) |
+| Validation | Zod 4 |
+| Routing | React Router 7 |
+| Error tracking | Sentry (optional, lazy-loaded) |
+| PWA | vite-plugin-pwa (Workbox) |
+| Testing | Vitest + Testing Library, Playwright (E2E) |
+| CI/CD | GitHub Actions (CI, CodeQL, secret scan) → Vercel |
 
----
+### Scripts
 
-## 📂 Project Structure
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Start the dev server (port `5178`, or `PORT` / `VITE_PORT`) |
+| `npm run build` | Type-check and build to `dist/` |
+| `npm run preview` | Serve the production build |
+| `npm run lint` | ESLint |
+| `npm test` | Vitest unit tests |
+| `npm run test:e2e` | Playwright E2E tests (`npm run test:e2e:install` first) |
+
+### Project structure
 
 ```
 mystats/
 ├── src/
-│   ├── bootstrap/
-│   │   └── appInit.ts           # App initialization (Sentry, DB migration, OAuth, Cloud Sync)
-│   ├── components/
-│   │   ├── layout/              # Shell (app frame, navigation, page transitions)
-│   │   ├── ui/                  # shadcn/ui primitives (Button, Card, Badge, Input, Textarea…)
-│   │   ├── ErrorBoundary        # Global crash boundary + debug report
-│   │   └── PwaUpdatePrompt      # SW update / offline-ready toast
-│   ├── db/
-│   │   ├── db.ts                # IndexedDB schema, migrations, CRUD helpers
-│   │   └── fallback.ts          # localStorage / in-memory fallback storage
-│   ├── hooks/
-│   │   ├── useLanguage.ts       # i18n context consumer hook
-│   │   └── useDbRecovery.ts     # Automatic fallback → DB recovery
-│   ├── lib/
-│   │   ├── ai-provider.ts       # Multi-AI engine (Gemini/OpenAI/Claude/Grok)
-│   │   ├── backup.ts            # Export/import backup logic
-│   │   ├── cloudSync.ts         # Supabase Cloud Sync logic
-│   │   ├── cloudSyncManager.ts  # Auto-sync orchestrator
-│   │   ├── debug.ts             # Debug snapshot report
-│   │   ├── journalExplorer.ts   # Journal search/filter engine
-│   │   ├── memu.ts              # memU memory system (embedded + server API)
-│   │   ├── memu.worker.ts       # memU Web Worker for background processing
-│   │   ├── sentry.ts            # Sentry lazy loader
-│   │   ├── supabase.ts          # Supabase client init
-│   │   ├── tombstones.ts        # Soft-delete tracking for cloud sync
-│   │   ├── translations.ts      # EN/KO translation strings
-│   │   ├── LanguageProvider      # React context provider for i18n
-│   │   ├── LanguageContext       # Language context definition
-│   │   └── utils.ts             # Shared utilities (cn, normalizeSkillName, generateId…)
-│   ├── pages/
-│   │   ├── Home.tsx             # Dashboard with stats & quick start
-│   │   ├── Journal.tsx          # Neural memory journal (write + AI analyze)
-│   │   ├── Profile.tsx          # Deep intelligence profile (skills, archetypes)
-│   │   ├── Strategy.tsx         # AI strategy engine + Vault + Context Builder
-│   │   ├── Settings.tsx         # Orchestrates settings sub-cards
-│   │   ├── journal/
-│   │   │   └── draftStorage.ts  # Draft auto-save/restore
-│   │   └── settings/
-│   │       ├── AISettingsCard        # API key/provider/model settings
-│   │       ├── CloudSyncCard         # Cloud sync sign-in/config
-│   │       ├── DataManagementCard    # Export/import/reset controls
-│   │       └── MemuSettingsCard      # Memory system settings
-│   └── test/                    # Test setup (Vitest + jsdom)
-├── e2e/                         # Playwright E2E tests
-├── scripts/                     # Deployment helper scripts
-├── chrome-extension/            # Chrome toolbar launcher extension
-├── docs/                        # Additional documentation
-├── supabase/                    # Supabase SQL migrations
-├── public/                      # Static assets, PWA manifest, icons
-├── .github/                     # CI workflows, issue/PR templates, dependabot
-└── package.json
+│   ├── bootstrap/appInit.ts   # Sentry, DB migration, OAuth, cloud sync
+│   ├── components/            # Layout shell, shadcn/ui primitives, ErrorBoundary, PWA prompt
+│   ├── db/                    # IndexedDB schema/migrations + localStorage fallback
+│   ├── hooks/                 # useLanguage, useDbRecovery
+│   ├── lib/                   # ai-provider, memu (+ worker), cloudSync, backup, journalExplorer, translations…
+│   └── pages/                 # Home, Journal, Profile, Strategy, Settings (+ settings cards)
+├── e2e/                       # Playwright tests
+├── chrome-extension/          # Toolbar launcher
+├── supabase/                  # SQL migrations
+├── docs/                      # Cloud sync, migrations, deploy notes
+└── public/                    # PWA manifest and icons
 ```
 
----
+### Privacy
 
-## 🌍 Internationalization
+- Journals, skills and insights are stored in your browser by default.
+- Your API key is kept in the browser and sent only to the provider you picked.
+- memU embedded mode runs locally; in server mode, entries go to your own memU service.
+- Cloud sync runs only when you sign in and enable it.
+- Export your data as JSON at any time.
 
-MyStats supports:
-- 🇺🇸 **English**
-- 🇰🇷 **한국어 (Korean)**
+Release notes: [`CHANGELOG.md`](CHANGELOG.md) · Security: [`SECURITY.md`](SECURITY.md) · Contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
-Toggle language in the header.
+</details>
 
----
+## License
 
-## 🗒️ Release Notes
-
-See `CHANGELOG.md`.
-
----
-
-## 🔒 Privacy First
-
-- **Local-first by default**: Journals/skills/insights are stored in your browser (IndexedDB)
-- **No mandatory backend**: no tracking, no data collection
-- **Your API Key**: direct connection to your provider in BYOK mode (we never see it)
-- **memU Embedded**: runs locally in the browser
-- **memU Server (optional)**: in API mode, entries may be sent to your local memU service
-- **Cloud Sync (optional)**: only when you sign in and enable it
-- **Export Anytime**: Download your data as JSON
-
----
-
-## 🤝 Contributing
-
-We love contributions! Please see our [Contributing Guide](CONTRIBUTING.md).
-
-```bash
-# Fork & Clone
-git clone https://github.com/kks0488/mystats.git
-
-# Create feature branch
-git checkout -b feature/amazing-feature
-
-# Commit changes
-git commit -m "feat: add amazing feature"
-
-# Push & create PR
-git push origin feature/amazing-feature
-```
-
----
-
-## 📜 License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
----
-
-## 🙏 Acknowledgements
-
-- [Google Gemini](https://ai.google.dev/) for generation
-- [OpenAI](https://platform.openai.com/) for generation
-- [Anthropic Claude](https://www.anthropic.com/) for generation
-- [xAI Grok](https://x.ai/) for generation
-- [shadcn/ui](https://ui.shadcn.com/) for the beautiful components
-- [Framer Motion](https://www.framer.com/motion/) for smooth animations
-- All the open-source contributors who made this possible
-
----
-
-<p align="center">
-  <strong>⭐ If this helped you, give it a star!</strong>
-</p>
-
-<p align="center">
-  <sub>Built with 🧠 + ☕ by <a href="https://github.com/kks0488">@kks0488</a></sub>
-</p>
+[MIT](LICENSE) © Kyoungsoo Kim
