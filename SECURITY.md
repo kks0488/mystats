@@ -51,7 +51,7 @@ MyStats is designed with **privacy-first, local-first** principles:
 If you discover a security vulnerability:
 
 1. **Do NOT** open a public issue
-2. Email: kks0488@gmail.com
+2. [Report a vulnerability privately](https://github.com/kks0488/mystats/security/advisories/new)
 3. Include:
    - Description of the vulnerability
    - Steps to reproduce

@@ -104,7 +104,7 @@ Requests go straight from your browser to the AI provider you chose. The built-i
 ## FAQ
 
 **Where is my data stored?**
-In your browser's IndexedDB (with a localStorage fallback). Export a JSON backup any time from Settings. Nothing is uploaded unless you sign in to cloud sync.
+In your browser's IndexedDB (with a localStorage fallback). Export a JSON backup any time from Settings. Nothing is uploaded to a server unless you sign in to cloud sync, though running AI analysis sends that entry to your chosen AI provider.
 
 **Do I need to pay for AI?**
 You use your own key. Gemini has a free tier; other providers bill you directly.
